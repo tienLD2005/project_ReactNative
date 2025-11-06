@@ -1,5 +1,7 @@
 import { login } from '@/apis';
 import { storage } from '@/utils/storage';
+import { LoginFormErrors } from '@/utils/validation';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -21,13 +23,11 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errors, setErrors] = useState<LoginFormErrors>({});
 
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
-            return;
-        }
-
+        // Clear errors trước khi submit
+        setErrors({});
         setLoading(true);
         try {
             const response = await login({ email, password });
@@ -48,38 +48,54 @@ export default function LoginScreen() {
                 ]);
             }
         } catch (error: any) {
-            console.error('❌ Login error:', error);
-            const errorMessage =
-                error.response?.data?.message ||
-                error.message ||
-                'Login failed. Please check your connection.';
+            const status = error.response?.status;
+            const data = error.response?.data;
 
-            // Check if account is not verified
-            if (errorMessage.includes('chưa được xác minh') || errorMessage.includes('not verified')) {
+            if (status === 400 && data?.data && typeof data.data === 'object') {
+                setErrors(data.data);
+                return;
+            }
+
+            const msg = data?.message?.toLowerCase() || '';
+
+            if (status === 400) {
+                // Email không tồn tại
+                if (msg.includes('email') && msg.includes('không') || msg.includes('not found')) {
+                    setErrors({ email: data.message });
+                    return;
+                }
+
+                // Sai password
+                if (msg.includes('password') && (msg.includes('sai') || msg.includes('wrong'))) {
+                    setErrors({ password: data.message });
+                    return;
+                }
+            }
+
+            if (status === 403 || msg.includes('chưa được xác minh') || msg.includes('not verified')) {
                 Alert.alert(
                     'Account Not Verified',
                     'Your account has not been verified yet. Please check your email for the OTP code.',
                     [
-                        {
-                            text: 'Cancel',
-                            style: 'cancel',
-                        },
+                        { text: 'Cancel', style: 'cancel' },
                         {
                             text: 'Verify Now',
-                            onPress: () => router.push({
-                                pathname: '/(auth)/verify-otp',
-                                params: {
-                                    email: email.trim(),
-                                    purpose: 'REGISTER'
-                                }
-                            }),
+                            onPress: () =>
+                                router.push({
+                                    pathname: '/(auth)/verify-otp',
+                                    params: {
+                                        email: email.trim(),
+                                        purpose: 'REGISTER',
+                                    },
+                                }),
                         },
                     ]
                 );
-            } else {
-                Alert.alert('Error', errorMessage);
+                return;
             }
-        } finally {
+            Alert.alert('Error', data?.message || 'Login failed.');
+        }
+        finally {
             setLoading(false);
         }
     };
@@ -129,31 +145,48 @@ export default function LoginScreen() {
 
                 {/* Email Input */}
                 <View style={styles.inputContainer}>
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.inputIcon}>✉️</Text>
+                    <View style={[styles.inputWrapper, errors.email && styles.inputWrapperError]}>
+                        <Text style={styles.inputIcon}>
+                            <Ionicons name="mail-outline" size={24}  color="#C0C0C0"/>
+                        </Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter Email"
                             placeholderTextColor="#B0B0B0"
                             value={email}
-                            onChangeText={setEmail}
+                            onChangeText={(text) => {
+                                setEmail(text);
+                                if (errors.email) {
+                                    setErrors(prev => ({ ...prev, email: undefined }));
+                                }
+                            }}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             editable={!loading}
                         />
                     </View>
+                    {errors.email && (
+                        <Text style={styles.errorText}>{errors.email}</Text>
+                    )}
                 </View>
 
                 {/* Password Input */}
                 <View style={styles.inputContainer}>
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.inputIcon}>🔒</Text>
+                    <View style={[styles.inputWrapper, errors.password && styles.inputWrapperError]}>
+                        <Text style={styles.inputIcon}>
+                            <Ionicons name="lock-closed-outline" size={24} color="#C0C0C0" />
+                        </Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter Password"
                             placeholderTextColor="#B0B0B0"
                             value={password}
-                            onChangeText={setPassword}
+                            onChangeText={(text) => {
+                                setPassword(text);
+                                if (errors.password) {
+                                    setErrors(prev => ({ ...prev, password: undefined }));
+                                }
+                            }}
                             secureTextEntry={!showPassword}
                             editable={!loading}
                         />
@@ -162,10 +195,17 @@ export default function LoginScreen() {
                             onPress={() => setShowPassword(!showPassword)}
                         >
                             <Text style={styles.eyeIconText}>
-                                {showPassword ? '👁️' : '👁️‍🗨️'}
+                                <Ionicons
+                                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                                    color="#C0C0C0"
+                                    size={22}
+                                />
                             </Text>
                         </TouchableOpacity>
                     </View>
+                    {errors.password && (
+                        <Text style={styles.errorText}>{errors.password}</Text>
+                    )}
                 </View>
 
                 {/* Forgot Password */}
@@ -321,7 +361,7 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     eyeIconText: {
-        fontSize: 18,
+        fontSize: 25,
     },
     forgotPassword: {
         alignSelf: 'flex-end',
@@ -360,5 +400,17 @@ const styles = StyleSheet.create({
         color: '#6C63FF',
         fontSize: 14,
         fontWeight: '600',
+    },
+    inputWrapperError: {
+        borderColor: '#FF5252',
+        borderWidth: 1.5,
+        backgroundColor: '#FFF5F5',
+    },
+    errorText: {
+        color: '#FF5252',
+        fontSize: 12,
+        marginTop: 6,
+        marginLeft: 4,
+        fontWeight: '500',
     },
 });

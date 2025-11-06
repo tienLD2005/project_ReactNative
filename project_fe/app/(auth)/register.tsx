@@ -1,7 +1,10 @@
 import { register, RegisterRequest } from '@/apis';
+import { RegisterFormErrors } from '@/utils/validation';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+
 import {
     ActivityIndicator,
     Alert,
@@ -27,14 +30,19 @@ export default function RegisterScreen() {
     });
     const [loading, setLoading] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [errors, setErrors] = useState<RegisterFormErrors>({});
+
+    const handleDateOfBirthChange = (date: Date) => {
+        setFormData({ ...formData, dateOfBirth: date });
+        // Clear error khi user chọn date mới
+        if (errors.dateOfBirth) {
+            setErrors(prev => ({ ...prev, dateOfBirth: undefined }));
+        }
+    };
 
     const handleRegister = async () => {
-        // Validation
-        if (!formData.name || !formData.email || !formData.phoneNumber || !formData.password) {
-            Alert.alert('Error', 'Please fill in all fields');
-            return;
-        }
-
+        // Clear errors trước khi submit
+        setErrors({});
         setLoading(true);
         try {
             // Format date to dd-MM-yyyy (backend expects this format)
@@ -74,7 +82,15 @@ export default function RegisterScreen() {
                 );
             }
         } catch (error: any) {
-            console.error('❌ Registration error:', error);
+            
+            // Backend trả về field errors qua data field (Map<String, String>)
+            if (error.response?.status === 400 && error.response?.data?.data && typeof error.response.data.data === 'object') {
+                // Hiển thị field errors dưới các input tương ứng
+                setErrors(error.response.data.data);
+                return;
+            }
+
+            // Các lỗi khác (network, server error, etc.) hiển thị Alert
             const errorMessage =
                 error.response?.data?.message ||
                 error.message ||
@@ -118,70 +134,115 @@ export default function RegisterScreen() {
                 {/* Name Input */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Curtis Weaver"
-                        placeholderTextColor="#999999"
-                        value={formData.name}
-                        onChangeText={(text) => setFormData({ ...formData, name: text })}
-                        editable={!loading}
-                    />
+                    <View style={[styles.inputWrapper, errors.name && styles.inputWrapperError]}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Curtis Weaver"
+                            placeholderTextColor="#999999"
+                            value={formData.name}
+                            onChangeText={(text) => {
+                                setFormData({ ...formData, name: text });
+                                if (errors.name) {
+                                    setErrors(prev => ({ ...prev, name: undefined }));
+                                }
+                            }}
+                            editable={!loading}
+                        />
+                    </View>
+                    {errors.name && (
+                        <Text style={styles.errorText}>{errors.name}</Text>
+                    )}
                 </View>
 
                 {/* Email Input */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Email Address</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="curtis.weaver@example.com"
-                        placeholderTextColor="#999999"
-                        value={formData.email}
-                        onChangeText={(text) => setFormData({ ...formData, email: text })}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        editable={!loading}
-                    />
+                    <View style={[styles.inputWrapper, errors.email && styles.inputWrapperError]}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="curtis.weaver@example.com"
+                            placeholderTextColor="#999999"
+                            value={formData.email}
+                            onChangeText={(text) => {
+                                setFormData({ ...formData, email: text });
+                                if (errors.email) {
+                                    setErrors(prev => ({ ...prev, email: undefined }));
+                                }
+                            }}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            editable={!loading}
+                        />
+                    </View>
+                    {errors.email && (
+                        <Text style={styles.errorText}>{errors.email}</Text>
+                    )}
                 </View>
 
                 {/* Password Input */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Password</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter your password"
-                        placeholderTextColor="#999999"
-                        value={formData.password}
-                        onChangeText={(text) => setFormData({ ...formData, password: text })}
-                        secureTextEntry
-                        editable={!loading}
-                    />
+                    <View style={[styles.inputWrapper, errors.password && styles.inputWrapperError]}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter your password"
+                            placeholderTextColor="#999999"
+                            value={formData.password}
+                            onChangeText={(text) => {
+                                setFormData({ ...formData, password: text });
+                                if (errors.password) {
+                                    setErrors(prev => ({ ...prev, password: undefined }));
+                                }
+                            }}
+                            secureTextEntry
+                            editable={!loading}
+                        />
+                    </View>
+                    {errors.password && (
+                        <Text style={styles.errorText}>{errors.password}</Text>
+                    )}
                 </View>
 
                 {/* Mobile Number Input */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Mobile Number</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="(209) 555-0104"
-                        placeholderTextColor="#999999"
-                        value={formData.phoneNumber}
-                        onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
-                        keyboardType="phone-pad"
-                        editable={!loading}
-                    />
+                    <View style={[styles.inputWrapper, errors.phoneNumber && styles.inputWrapperError]}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="(209) 555-0104"
+                            placeholderTextColor="#999999"
+                            value={formData.phoneNumber}
+                            onChangeText={(text) => {
+                                setFormData({ ...formData, phoneNumber: text });
+                                if (errors.phoneNumber) {
+                                    setErrors(prev => ({ ...prev, phoneNumber: undefined }));
+                                }
+                            }}
+                            keyboardType="phone-pad"
+                            editable={!loading}
+                        />
+                    </View>
+                    {errors.phoneNumber && (
+                        <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+                    )}
                 </View>
 
                 {/* Date of Birth Input */}
                 <View style={styles.inputContainer}>
                     <Text style={styles.label}>Date of Birth</Text>
                     <TouchableOpacity
-                        style={styles.dateInput}
+                        style={[styles.dateInput, errors.dateOfBirth && styles.inputWrapperError]}
                         onPress={() => setShowDatePicker(true)}
                         disabled={loading}
                     >
                         <Text style={styles.dateText}>{formatDate(formData.dateOfBirth)}</Text>
-                        <Text style={styles.calendarIcon}>📅</Text>
+                        <Text style={styles.calendarIcon}>
+                        
+                        </Text>
                     </TouchableOpacity>
+                    {errors.dateOfBirth && (
+                        <Text style={styles.errorText}>{errors.dateOfBirth}</Text>
+                    )}
                     {showDatePicker && (
                         <DateTimePicker
                             value={formData.dateOfBirth}
@@ -191,7 +252,7 @@ export default function RegisterScreen() {
                             onChange={(event, selectedDate) => {
                                 setShowDatePicker(Platform.OS === 'ios');
                                 if (selectedDate) {
-                                    setFormData({ ...formData, dateOfBirth: selectedDate });
+                                    handleDateOfBirthChange(selectedDate);
                                 }
                             }}
                         />
@@ -334,15 +395,29 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         fontWeight: '500',
     },
-    input: {
+    inputWrapper: {
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: '#6C63FF',
         borderRadius: 12,
         paddingHorizontal: 16,
+    },
+    inputWrapperError: {
+        borderColor: '#FF5252',
+        borderWidth: 1.5,
+        backgroundColor: '#FFF5F5',
+    },
+    input: {
         paddingVertical: 14,
         fontSize: 15,
         color: '#000000',
+    },
+    errorText: {
+        color: '#FF5252',
+        fontSize: 12,
+        marginTop: 6,
+        marginLeft: 4,
+        fontWeight: '500',
     },
     dateInput: {
         backgroundColor: '#FFFFFF',

@@ -1,3 +1,4 @@
+import { forgotPassword } from '@/apis';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -51,7 +52,6 @@ export default function ForgotPasswordScreen() {
                 ]
             );
         } catch (error: any) {
-            console.error('❌ Forgot password error:', error);
             const errorMessage =
                 error.response?.data?.message ||
                 error.message ||

@@ -59,5 +59,10 @@ export const storage = {
             STORAGE_KEYS.USER_DATA,
         ]);
     },
+
+    // Clear everything including onboarding (for testing/reset app)
+    clearEverything: async (): Promise<void> => {
+        await AsyncStorage.clear();
+    },
 };
 

@@ -67,7 +67,7 @@ export default function VerifyOtpScreen() {
                 },
             ]);
         } catch (error: any) {
-            console.error('❌ Verify OTP error:', error);
+            // Chỉ log trong development mode
             const errorMessage =
                 error.response?.data?.message ||
                 error.message ||
@@ -134,7 +134,7 @@ export default function VerifyOtpScreen() {
                         {otp.map((digit, index) => (
                             <TextInput
                                 key={index}
-                                ref={(ref) => (inputRefs.current[index] = ref)}
+                                ref={(ref: any) => (inputRefs.current[index] = ref)}
                                 style={[
                                     styles.otpInput,
                                     digit ? styles.otpInputFilled : null,

@@ -27,21 +27,23 @@ const onboardingData: OnboardingItem[] = [
         title: 'Easy way to book\nhotels with us',
         description:
             'It is a long established fact that a reader will be distracted by the readable content.',
-        image: require('@/assets/images/react-logo.png'), // You can replace with actual hotel image
+            image: { uri: "https://decoxdesign.com/upload/images/mau-khach-san-5-sao-07-decox-design.jpg" }, 
     },
     {
         id: '2',
         title: 'Find your perfect\nstay',
         description:
             'Discover thousands of hotels and resorts around the world at the best prices.',
-        image: require('@/assets/images/react-logo.png'),
+        image: { uri: "https://anphatgroups.vn//upload/images/m%E1%BA%ABu%20kh%C3%A1ch%20s%E1%BA%A1n%205%20sao/mau-thiet-ke-khach-san-5-sao-an-phat-1.jpg" }
+,
     },
     {
         id: '3',
         title: 'Book with\nconfidence',
         description:
             'Secure booking, instant confirmation, and 24/7 customer support for your peace of mind.',
-        image: require('@/assets/images/react-logo.png'),
+        image: { uri: "https://media.vietnamplus.vn/images/7255a701687d11cb8c6bbc58a6c807854994b34e708a5e910b80d7c2ce36990b80b78284a9233d3c595111a7ab7698e6/1.jpg" }
+,
     },
 ];
 
@@ -57,13 +59,13 @@ export default function OnboardingScreen() {
             setCurrentIndex(nextIndex);
         } else {
             // Last slide, navigate to login
-            await storage.setOnboardingSeen();
+            await storage.setOnboardingSeen();  // ← COMMENT ĐỂ TEST (Không set cờ)
             router.replace('/(auth)/login');
         }
     };
 
     const handleSkip = async () => {
-        await storage.setOnboardingSeen();
+        await storage.setOnboardingSeen();  // ← COMMENT ĐỂ TEST (Không set cờ)
         router.replace('/(auth)/login');
     };
 

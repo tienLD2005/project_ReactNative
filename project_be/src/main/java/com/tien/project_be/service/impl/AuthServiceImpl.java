@@ -3,6 +3,8 @@ package com.tien.project_be.service.impl;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.springframework.scheduling.annotation.Async;
@@ -20,12 +22,11 @@ import com.tien.project_be.dto.response.RegisterResponse;
 import com.tien.project_be.entity.PasswordResetToken;
 import com.tien.project_be.entity.User;
 import com.tien.project_be.exception.AccountNotVerifiedException;
-import com.tien.project_be.exception.EmailAlreadyExistsException;
 import com.tien.project_be.exception.EmailNotFoundException;
-import com.tien.project_be.exception.InvalidCredentialsException;
 import com.tien.project_be.exception.InvalidOtpException;
 import com.tien.project_be.exception.OtpExpiredException;
 import com.tien.project_be.exception.OtpNotFoundException;
+import com.tien.project_be.exception.ValidationException;
 import com.tien.project_be.repository.PasswordResetTokenRepository;
 import com.tien.project_be.repository.UserRepository;
 import com.tien.project_be.service.AuthService;
@@ -46,20 +47,52 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
+        // Collect validation errors
+        Map<String, String> validationErrors = new HashMap<>();
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new EmailAlreadyExistsException("Email đã tồn tại trong hệ thống");
+        // Check email trùng
+        if (userRepository.existsByEmail(request.getEmail())) {
+            validationErrors.put("email", "Email đã tồn tại trong hệ thống");
         }
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        // Check số điện thoại trùng
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            validationErrors.put("phoneNumber", "Số điện thoại đã tồn tại trong hệ thống");
+        }
 
+        // Validate và parse date of birth
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        LocalDate dateOfBirth = null;
+        try {
+            dateOfBirth = LocalDate.parse(request.getDateOfBirth(), formatter);
+
+            // Validate tuổi (phải trên 13 tuổi)
+            LocalDate minDate = LocalDate.now().minusYears(18);
+            if (dateOfBirth.isAfter(minDate)) {
+                validationErrors.put("dateOfBirth", "Bạn phải trên 18 tuổi");
+            }
+
+            // Validate không quá 120 tuổi
+            LocalDate maxDate = LocalDate.now().minusYears(100);
+            if (dateOfBirth.isBefore(maxDate)) {
+                validationErrors.put("dateOfBirth", "Ngày sinh không hợp lệ");
+            }
+        } catch (Exception e) {
+            validationErrors.put("dateOfBirth", "Ngày sinh không hợp lệ. Vui lòng nhập đúng định dạng dd-MM-yyyy");
+        }
+
+        // Nếu có lỗi validation, throw exception với field errors
+        if (!validationErrors.isEmpty()) {
+            throw new ValidationException(validationErrors);
+        }
+
+        // Tạo user nếu không có lỗi (dateOfBirth đã được validate)
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPhoneNumber(request.getPhoneNumber());
         user.setGender(request.getGender());
-
-        user.setDateOfBirth(LocalDate.parse(request.getDateOfBirth(), formatter));
+        user.setDateOfBirth(dateOfBirth);
 
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
@@ -89,15 +122,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new EmailNotFoundException("Email không tồn tại trong hệ thống"));
+        Map<String, String> validationErrors = new HashMap<>();
 
-        if (!user.isVerified()) {
-            throw new AccountNotVerifiedException("Tài khoản chưa được xác minh. Vui lòng kiểm tra email để xác thực");
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+
+        if (user == null) {
+            validationErrors.put("email", "Email không tồn tại trong hệ thống");
+        } else {
+            if (!user.isVerified()) {
+                throw new AccountNotVerifiedException(
+                        "Tài khoản chưa được xác minh. Vui lòng kiểm tra email để xác thực");
+            }
+
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                validationErrors.put("password", "Mật khẩu không chính xác");
+            }
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new InvalidCredentialsException("Mật khẩu không chính xác");
+        // Nếu có lỗi validation (email không tồn tại hoặc password sai), throw
+        // exception với field errors
+        if (!validationErrors.isEmpty()) {
+            throw new ValidationException(validationErrors);
         }
 
         String token = jwtUtil.generateToken(user.getEmail());
