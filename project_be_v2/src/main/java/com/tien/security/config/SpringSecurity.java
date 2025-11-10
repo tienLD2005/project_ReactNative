@@ -1,10 +1,8 @@
 package com.tien.security.config;
 
-import com.tien.security.jwt.JWTAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -22,12 +20,20 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.tien.security.jwt.JWTAuthFilter;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true)
 public class SpringSecurity {
+    private static final String[] SWAGGER_WHITELIST = {
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html"
+    };
     @Autowired
     private PasswordEncoder passwordEncoder;
+
     @Autowired
     private UserDetailsService userDetailsService;
 
@@ -48,11 +54,6 @@ public class SpringSecurity {
         daoAuthenticationProvider.setPasswordEncoder(passwordEncoder);
         return daoAuthenticationProvider;
     }
-    private static final String[] SWAGGER_WHITELIST = {
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html"
-    };
 
     @Bean
     public SecurityFilterChain configure(HttpSecurity http, JWTAuthFilter jwtAuthFilter) throws Exception {
@@ -61,11 +62,9 @@ public class SpringSecurity {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers( "/api/v1/hotels/**", "/api/v1/rooms/**", "/api/v1/reviews/**").permitAll()
-                        .requestMatchers(SWAGGER_WHITELIST).permitAll()  // ✅ Cho Swagger
-                        .anyRequest().authenticated()
-                )
-
+                        .requestMatchers("/api/v1/hotels/**", "/api/v1/rooms/**", "/api/v1/reviews/**").permitAll()
+                        .requestMatchers(SWAGGER_WHITELIST).permitAll() // ✅ Cho Swagger
+                        .anyRequest().authenticated())
 
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -87,6 +86,5 @@ public class SpringSecurity {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
 
 }

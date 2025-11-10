@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -13,18 +14,54 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const onLogin = async () => {
-    // Validate email
-    if (!email.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập email");
-      return;
-    } else if (!/^[A-Za-z0-9._%+-]+@gmail\.com$/.test(email)) {
-      Alert.alert("Lỗi", "Email phải có định dạng @gmail.com");
-      return;
-    }
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-    if (!password.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập mật khẩu");
+  const validateEmail = (emailValue: string): boolean => {
+    if (!emailValue.trim()) {
+      setEmailError("Vui lòng nhập email");
+      return false;
+    } else if (!/^[A-Za-z0-9._%+-]+@gmail\.com$/.test(emailValue)) {
+      setEmailError("Email phải có định dạng @gmail.com");
+      return false;
+    }
+    setEmailError("");
+    return true;
+  };
+
+  const validatePassword = (passwordValue: string): boolean => {
+    if (!passwordValue.trim()) {
+      setPasswordError("Vui lòng nhập mật khẩu");
+      return false;
+    }
+    setPasswordError("");
+    return true;
+  };
+
+  const handleEmailChange = (text: string) => {
+    setEmail(text);
+    if (emailError) {
+      setEmailError("");
+    }
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    if (passwordError) {
+      setPasswordError("");
+    }
+  };
+
+  const onLogin = async () => {
+    // Clear previous errors
+    setEmailError("");
+    setPasswordError("");
+
+    // Validate
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+
+    if (!isEmailValid || !isPasswordValid) {
       return;
     }
 
@@ -38,7 +75,6 @@ export default function LoginScreen() {
       const data = res?.data;
       if (!data) throw new Error("No data");
 
-      // Trường hợp 403: tài khoản chưa kích hoạt
       if (res.status === 403) {
         Alert.alert(
           "Tài khoản chưa kích hoạt",
@@ -77,8 +113,6 @@ export default function LoginScreen() {
     }
   };
 
-  const isFormValid = email.length > 0 && password.length > 0;
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -87,10 +121,11 @@ export default function LoginScreen() {
       >
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>LG</Text>
-          </View>
-          <Text style={styles.logoTitle}>live Green</Text>
+          <Image
+            source={require('@/assets/images/logo.png')}
+            style={styles.logo}
+            contentFit="contain"
+          />
         </View>
 
         {/* Header */}
@@ -137,22 +172,24 @@ export default function LoginScreen() {
             label="Email Address"
             placeholder="Enter Email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
             icon="mail-outline"
             keyboardType="email-address"
             autoCapitalize="none"
+            error={emailError}
           />
 
           <Input
             label="Password"
             placeholder="Enter Password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={handlePasswordChange}
             icon="lock-closed-outline"
             secureTextEntry
             showPasswordToggle
             isPasswordVisible={showPassword}
             onTogglePassword={() => setShowPassword(!showPassword)}
+            error={passwordError}
           />
 
           <Text style={styles.forgotPassword}>Forgot Password?</Text>
@@ -162,7 +199,6 @@ export default function LoginScreen() {
             onPress={onLogin}
             variant="primary"
             isLoading={loading}
-            disabled={!isFormValid}
           />
         </View>
 
@@ -192,29 +228,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 40,
+    justifyContent: "flex-start",
+    marginBottom: 20,
+    marginLeft: -35,
   },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#3182CE",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  logoTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#3182CE",
+  logo: {
+    width: 250,
+    height: 120,
   },
   header: {
     marginBottom: 32,
@@ -222,7 +242,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#3182CE",
     marginBottom: 8,
   },
   subtitle: {

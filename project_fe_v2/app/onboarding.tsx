@@ -52,7 +52,7 @@ export default function OnboardingScreen(): React.JSX.Element {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
-  
+
   const isAndroid = Platform.OS === 'android';
   const bottomPadding = isAndroid ? Math.max(insets.bottom, 20) : insets.bottom;
 
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'flex-start',
-    marginTop: 8,
+    marginTop: 30,
   },
   paginationContainer: {
     position: 'absolute',
@@ -304,6 +304,8 @@ const styles = StyleSheet.create({
       android: 34,
       default: 36,
     }),
+    textAlign: 'center',
+    width: '100%',
   },
   description: {
     fontSize: Platform.select({
@@ -317,6 +319,8 @@ const styles = StyleSheet.create({
       android: 22,
       default: 24,
     }),
+    textAlign: 'center',
+    width: '100%',
   },
   buttonContainer: {
     position: 'absolute',

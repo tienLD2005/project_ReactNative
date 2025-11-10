@@ -38,6 +38,59 @@ export default function RoomDetailScreen(): React.JSX.Element {
     loadRoomDetail();
   }, [id]);
 
+  // Format date từ backend (có thể là string hoặc array)
+  const formatReviewDate = (dateInput: string | number[] | null | undefined): string => {
+    if (!dateInput) {
+      return 'N/A';
+    }
+
+    try {
+      let date: Date;
+
+      // Handle array format [year, month, day, hour, minute, second] from backend
+      if (Array.isArray(dateInput)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = dateInput;
+        if (year && month !== undefined && day !== undefined) {
+          date = new Date(year, month - 1, day, hour, minute, second); // month is 0-indexed in JS Date
+        } else {
+          console.error('Invalid date array:', dateInput);
+          return 'N/A';
+        }
+      } else {
+        // Handle string format
+        const dateString = String(dateInput);
+
+        if (dateString.includes('T')) {
+          // ISO format with time: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ss.SSSZ"
+          date = new Date(dateString);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          // Format "YYYY-MM-DD" - parse manually to avoid timezone issues
+          const [year, month, day] = dateString.split('-').map(Number);
+          date = new Date(year, month - 1, day);
+        } else {
+          // Try to parse as-is
+          date = new Date(dateString);
+        }
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateInput);
+        return 'N/A';
+      }
+
+      // Format date to readable string (English format)
+      return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, dateInput);
+      return 'N/A';
+    }
+  };
+
   const loadRoomDetail = async () => {
     try {
       setLoading(true);
@@ -130,7 +183,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
             <View style={styles.imageOverlay}>
               <View style={styles.imageCountBadge}>
                 <Ionicons name="images-outline" size={16} color={BOOKING_COLORS.BACKGROUND} />
-                <Text style={styles.imageCountText}>{room.imageUrls.length} ảnh</Text>
+                <Text style={styles.imageCountText}>{room.imageUrls.length} photos</Text>
               </View>
             </View>
           )}
@@ -141,22 +194,20 @@ export default function RoomDetailScreen(): React.JSX.Element {
         <View style={styles.content}>
           <Text style={styles.roomName}>{room.roomType}</Text>
 
-          {/* Rating */}
-          {room.rating && room.rating > 0 && (
-            <View style={styles.ratingRow}>
-              {[...Array(5)].map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name={i < Math.floor(room.rating || 0) ? 'star' : 'star-outline'}
-                  size={16}
-                  color={BOOKING_COLORS.RATING}
-                />
-              ))}
-              <Text style={styles.ratingText}>
-                {room.rating.toFixed(1)} ({room.reviewCount || 0} Reviews)
-              </Text>
-            </View>
-          )}
+          {/* Rating - hiển thị kể cả khi bằng 0 */}
+          <View style={styles.ratingRow}>
+            {[...Array(5)].map((_, i) => (
+              <Ionicons
+                key={i}
+                name={i < Math.floor(room.rating || 0) ? 'star' : 'star-outline'}
+                size={16}
+                color={BOOKING_COLORS.RATING}
+              />
+            ))}
+            <Text style={styles.ratingText}>
+              {(room.rating || 0).toFixed(1)} ({(room.reviewCount || 0)} {(room.reviewCount || 0) === 1 ? 'Review' : 'Reviews'})
+            </Text>
+          </View>
 
           <View style={styles.locationRow}>
             <Ionicons name="business-outline" size={16} color={BOOKING_COLORS.TEXT_SECONDARY} />
@@ -168,7 +219,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
           {/* Description */}
           {room.description && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Mô tả</Text>
+              <Text style={styles.sectionTitle}>Description</Text>
               <Text style={styles.overviewText}>{room.description}</Text>
             </View>
           )}
@@ -177,7 +228,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
           {room.imageUrls && room.imageUrls.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Hình ảnh</Text>
+                <Text style={styles.sectionTitle}>Photos</Text>
                 <TouchableOpacity
                   onPress={() => {
                     router.push({
@@ -185,7 +236,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
                       params: { id: id },
                     });
                   }}>
-                  <Text style={styles.viewAllText}>Xem tất cả</Text>
+                  <Text style={styles.viewAllText}>See all</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -212,14 +263,49 @@ export default function RoomDetailScreen(): React.JSX.Element {
 
           {/* Room Features */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Chi tiết phòng</Text>
-            <Text style={styles.featureText}>Sức chứa: {room.capacity} người</Text>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <Text style={styles.featureText}>Capacity: {room.capacity} people</Text>
+          </View>
+
+          {/* Room Highlights */}
+          <View style={styles.highlightsContainer}>
+            <View style={styles.highlightItem}>
+              <Ionicons name="sparkles-outline" size={20} color={BOOKING_COLORS.TEXT_PRIMARY} style={styles.highlightIcon} />
+              <View style={styles.highlightContent}>
+                <Text style={styles.highlightTitle}>Enhanced Clean</Text>
+                <Text style={styles.highlightDescription}>This host committed to Airbnb's clone 5-step enhanced cleaning process.</Text>
+              </View>
+            </View>
+            <View style={styles.highlightSeparator} />
+            <View style={styles.highlightItem}>
+              <Ionicons name="location-outline" size={20} color={BOOKING_COLORS.TEXT_PRIMARY} style={styles.highlightIcon} />
+              <View style={styles.highlightContent}>
+                <Text style={styles.highlightTitle}>Great Location</Text>
+                <Text style={styles.highlightDescription}>95% of recent guests give the location a 5-star rating.</Text>
+              </View>
+            </View>
+            <View style={styles.highlightSeparator} />
+            <View style={styles.highlightItem}>
+              <Ionicons name="key-outline" size={20} color={BOOKING_COLORS.TEXT_PRIMARY} style={styles.highlightIcon} />
+              <View style={styles.highlightContent}>
+                <Text style={styles.highlightTitle}>Great check-in-experience</Text>
+                <Text style={styles.highlightDescription}>90% of recent guests gave the check-in process a 5-star rating.</Text>
+              </View>
+            </View>
+            <View style={styles.highlightSeparator} />
+            <View style={styles.highlightItem}>
+              <Ionicons name="calendar-outline" size={20} color={BOOKING_COLORS.TEXT_PRIMARY} style={styles.highlightIcon} />
+              <View style={styles.highlightContent}>
+                <Text style={styles.highlightTitle}>Free cancellation until 2:00 PM on</Text>
+                <Text style={styles.highlightDescription}>8 May</Text>
+              </View>
+            </View>
           </View>
 
           {/* Reviews Section */}
           {reviews.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Đánh giá ({reviews.length})</Text>
+              <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
               {reviews.slice(0, 5).map((review) => (
                 <View key={review.reviewId} style={styles.reviewItem}>
                   <View style={styles.reviewHeader}>
@@ -237,7 +323,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
                       </View>
                     </View>
                     <Text style={styles.reviewDate}>
-                      {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                      {formatReviewDate(review.createdAt as string | number[])}
                     </Text>
                   </View>
                   <Text style={styles.reviewComment}>{review.comment}</Text>
@@ -267,7 +353,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
               <Text style={styles.priceLabel}>
                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.price)}
               </Text>
-              <Text style={styles.priceSubLabel}>/đêm</Text>
+              <Text style={styles.priceSubLabel}>/night</Text>
             </>
           ) : (
             <Text style={styles.priceLabel}>Liên hệ để biết giá</Text>
@@ -277,15 +363,19 @@ export default function RoomDetailScreen(): React.JSX.Element {
           style={styles.selectDateButton}
           onPress={() => {
             router.push({
-              pathname: '/booking/select-guest',
+              pathname: '/booking/select-date',
               params: {
                 roomId: id,
                 roomName: room.roomType,
                 roomPrice: room.price?.toString() || '0',
+                hotelName: room.hotelName || '',
+                rating: room.rating?.toString() || '0',
+                reviewCount: room.reviewCount?.toString() || '0',
+                roomImage: room.imageUrls && room.imageUrls.length > 0 ? room.imageUrls[0] : '',
               },
             });
           }}>
-          <Text style={styles.selectDateText}>Đặt phòng</Text>
+          <Text style={styles.selectDateText}>Select Date</Text>
         </TouchableOpacity>
       </View>
 
@@ -426,6 +516,44 @@ const styles = StyleSheet.create({
   photoThumbnail: { width: 100, height: 100, borderRadius: 12, overflow: 'hidden' },
   photoImage: { width: '100%', height: '100%' },
   featureText: { fontSize: 16, color: BOOKING_COLORS.TEXT_PRIMARY, lineHeight: 24, marginBottom: 8 },
+  highlightsContainer: {
+    backgroundColor: BOOKING_COLORS.BACKGROUND,
+    marginHorizontal: 10,
+    marginBottom: 24,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A90E2',
+    overflow: 'hidden',
+  },
+  highlightItem: {
+    flexDirection: 'row',
+    padding: 16,
+    alignItems: 'flex-start',
+  },
+  highlightIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  highlightContent: {
+    flex: 1,
+  },
+  highlightTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: BOOKING_COLORS.TEXT_PRIMARY,
+    marginBottom: 4,
+  },
+  highlightDescription: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: BOOKING_COLORS.TEXT_SECONDARY,
+    lineHeight: 20,
+  },
+  highlightSeparator: {
+    height: 1,
+    backgroundColor: BOOKING_COLORS.BORDER,
+    marginHorizontal: 16,
+  },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',

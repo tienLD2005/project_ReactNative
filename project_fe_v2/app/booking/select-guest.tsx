@@ -48,6 +48,9 @@ export default function SelectGuestScreen(): React.JSX.Element {
         adults: adults.toString(),
         children: children.toString(),
         infants: infants.toString(),
+        // Ensure dates are passed through
+        checkIn: params.checkIn as string,
+        checkOut: params.checkOut as string,
       },
     });
   };

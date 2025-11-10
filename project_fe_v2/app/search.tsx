@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  StatusBar,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { getAllRooms, RoomResponse, searchRooms } from '@/apis/roomApi';
 import { HotelCard } from '@/components/booking/hotel-card'; // có thể đổi thành RoomCard nếu bạn tạo component riêng
 import { BOOKING_COLORS, Hotel } from '@/constants/booking'; // Hotel type dùng tạm cho UI
-import { getAllRooms, searchRooms, RoomResponse } from '@/apis/roomApi';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SearchRoomScreen(): React.JSX.Element {
   const router = useRouter();
@@ -23,23 +24,22 @@ export default function SearchRoomScreen(): React.JSX.Element {
   const [rooms, setRooms] = useState<Hotel[]>([]); // dùng lại kiểu Hotel cho UI
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    loadRooms();
+  const mapRoomResponseToRoom = useCallback((data: RoomResponse[]): Hotel[] => {
+    return data.map((item) => ({
+      id: item.roomId.toString(),
+      name: item.roomType,
+      location: item.hotelName || '', // nếu RoomResponse có trường hotelName
+      price: item.price || 0,
+      // Lấy rating và reviewCount từ data thực tế, xử lý null/undefined
+      rating: item.rating !== null && item.rating !== undefined ? item.rating : 0,
+      reviewCount: item.reviewCount !== null && item.reviewCount !== undefined ? item.reviewCount : 0,
+      imageUrl: (item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : "") ||
+        "",
+      isFavorite: false,
+    }));
   }, []);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchText.trim().length > 0) {
-        handleSearch(searchText.trim());
-      } else {
-        loadRooms();
-      }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchText]);
-
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAllRooms();
@@ -50,9 +50,9 @@ export default function SearchRoomScreen(): React.JSX.Element {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mapRoomResponseToRoom]);
 
-  const handleSearch = async (keyword: string) => {
+  const handleSearch = useCallback(async (keyword: string) => {
     try {
       setLoading(true);
       const data = await searchRooms(keyword);
@@ -63,21 +63,30 @@ export default function SearchRoomScreen(): React.JSX.Element {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mapRoomResponseToRoom]);
 
-  const mapRoomResponseToRoom = (data: RoomResponse[]): Hotel[] => {
-    return data.map((item) => ({
-      id: item.roomId.toString(),
-      name: item.roomType,
-      location: item.hotelName || '', // nếu RoomResponse có trường hotelName
-      price: item.price || 0,
-      rating: 0,
-      reviewCount: 0,
-      imageUrl: (item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : "") ||
-        "",
-      isFavorite: false,
-    }));
-  };
+  // Reload data mỗi khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      if (searchText.trim().length === 0) {
+        loadRooms();
+      }
+    }, [loadRooms, searchText])
+  );
+
+  // Debounce search khi searchText thay đổi
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchText.trim().length > 0) {
+        handleSearch(searchText.trim());
+      } else {
+        loadRooms();
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText, handleSearch, loadRooms]);
+
 
   const toggleFavorite = (roomId: string): void => {
     setRooms(
@@ -98,7 +107,7 @@ export default function SearchRoomScreen(): React.JSX.Element {
         <View style={styles.searchInputContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm kiếm phòng..."
+            placeholder="Search for a room..."
             placeholderTextColor={BOOKING_COLORS.TEXT_SECONDARY}
             value={searchText}
             onChangeText={setSearchText}
@@ -123,12 +132,12 @@ export default function SearchRoomScreen(): React.JSX.Element {
           <View style={styles.locationIconContainer}>
             <Ionicons name="locate-outline" size={24} color={BOOKING_COLORS.PRIMARY} />
           </View>
-          <Text style={styles.locationText}>hoặc sử dụng vị trí hiện tại của tôi</Text>
+          <Text style={styles.locationText}>or use my current location</Text>
         </TouchableOpacity>
 
         {/* Recent Search */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tìm kiếm gần đây</Text>
+          <Text style={styles.sectionTitle}>Recent search</Text>
           {/* Recent search items sẽ đặt ở đây */}
         </View>
 

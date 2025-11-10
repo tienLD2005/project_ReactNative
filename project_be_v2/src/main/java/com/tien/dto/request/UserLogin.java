@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserLogin {
 
-    @NotBlank(message = "email không được để trống")
+    @NotBlank(message = "Email không được để trống")
     @Pattern(
             regexp = "^[A-Za-z0-9._%+-]+@gmail\\.com$",
             message = "Email phải có định dạng hợp lệ và kết thúc bằng @gmail.com"

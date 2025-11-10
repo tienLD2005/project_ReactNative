@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BookingResponse, getBookingById } from '@/apis/bookingApi';
+import { BOOKING_COLORS } from '@/constants/booking';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
-import { BOOKING_COLORS } from '@/constants/booking';
-import { getBookingById, BookingResponse } from '@/apis/bookingApi';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BookingDetailScreen(): React.JSX.Element {
   const router = useRouter();
@@ -42,13 +42,56 @@ export default function BookingDetailScreen(): React.JSX.Element {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+  const formatDate = (dateInput: string | number[] | null | undefined): string => {
+    if (!dateInput) {
+      return 'N/A';
+    }
+
+    try {
+      let date: Date;
+
+      // Handle array format [year, month, day] from backend
+      if (Array.isArray(dateInput)) {
+        const [year, month, day] = dateInput;
+        if (year && month !== undefined && day !== undefined) {
+          date = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+        } else {
+          console.error('Invalid date array:', dateInput);
+          return 'N/A';
+        }
+      } else {
+        // Handle string format
+        const dateString = String(dateInput);
+
+        if (dateString.includes('T')) {
+          // ISO format with time: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ss.SSSZ"
+          date = new Date(dateString);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          // Format "YYYY-MM-DD" - parse manually to avoid timezone issues
+          const [year, month, day] = dateString.split('-').map(Number);
+          date = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+        } else {
+          // Try to parse as-is
+          date = new Date(dateString);
+        }
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateInput);
+        return 'N/A';
+      }
+
+      // Format date to readable string
+      return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, dateInput);
+      return 'N/A';
+    }
   };
 
   if (loading || !booking) {
@@ -89,6 +132,7 @@ export default function BookingDetailScreen(): React.JSX.Element {
 
         {/* Booking Info */}
         <View style={styles.content}>
+          {/* Rating - hiển thị kể cả khi bằng 0 */}
           <View style={styles.ratingRow}>
             {[...Array(5)].map((_, i) => (
               <Ionicons
@@ -99,15 +143,27 @@ export default function BookingDetailScreen(): React.JSX.Element {
               />
             ))}
             <Text style={styles.ratingText}>
-              {booking.rating?.toFixed(1) || '0.0'} ({booking.reviewCount || 0} Reviews)
+              {(booking.rating || 0).toFixed(1)} ({(booking.reviewCount || 0)} {(booking.reviewCount || 0) === 1 ? 'Review' : 'Reviews'})
             </Text>
           </View>
 
-          <Text style={styles.hotelName}>{booking.hotelName}</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={18} color={BOOKING_COLORS.TEXT_SECONDARY} />
-            <Text style={styles.location}>{booking.hotelLocation || booking.hotelCity}</Text>
-          </View>
+          {/* Room Type */}
+          {booking.roomType ? (
+            <Text style={styles.roomType}>{booking.roomType}</Text>
+          ) : null}
+
+          {/* Hotel Name */}
+          <Text style={styles.hotelName}>{booking.hotelName || 'Hotel'}</Text>
+
+          {/* Location */}
+          {(booking.hotelLocation || booking.hotelCity) && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={18} color={BOOKING_COLORS.TEXT_SECONDARY} />
+              <Text style={styles.location}>
+                {booking.hotelLocation || booking.hotelCity || booking.hotelAddress || ''}
+              </Text>
+            </View>
+          )}
 
           {/* Booking Details */}
           <View style={styles.detailsSection}>
@@ -127,7 +183,9 @@ export default function BookingDetailScreen(): React.JSX.Element {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Guests</Text>
               <Text style={styles.detailValue}>
-                {booking.adultsCount} adults, {booking.childrenCount} children, {booking.infantsCount} infants
+                {booking.adultsCount} {booking.adultsCount === 1 ? 'adult' : 'adults'}
+                {booking.childrenCount > 0 && `, ${booking.childrenCount} ${booking.childrenCount === 1 ? 'child' : 'children'}`}
+                {booking.infantsCount > 0 && `, ${booking.infantsCount} ${booking.infantsCount === 1 ? 'infant' : 'infants'}`}
               </Text>
             </View>
             <View style={styles.detailRow}>
@@ -137,8 +195,13 @@ export default function BookingDetailScreen(): React.JSX.Element {
                   styles.detailValue,
                   booking.status === 'CONFIRMED' && styles.statusConfirmed,
                   booking.status === 'CANCELLED' && styles.statusCancelled,
+                  booking.status === 'PENDING' && styles.statusPending,
                 ]}>
-                {booking.status}
+                {booking.status === 'CONFIRMED'
+                  ? 'Confirmed'
+                  : booking.status === 'CANCELLED'
+                    ? 'Cancelled'
+                    : 'Pending'}
               </Text>
             </View>
             <View style={styles.detailRow}>
@@ -212,6 +275,12 @@ const styles = StyleSheet.create({
     color: BOOKING_COLORS.TEXT_SECONDARY,
     marginLeft: 4,
   },
+  roomType: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: BOOKING_COLORS.TEXT_PRIMARY,
+    marginBottom: 4,
+  },
   hotelName: {
     fontSize: 24,
     fontWeight: '700',
@@ -256,9 +325,15 @@ const styles = StyleSheet.create({
   },
   statusConfirmed: {
     color: '#10B981',
+    fontWeight: '600',
   },
   statusCancelled: {
     color: '#EF4444',
+    fontWeight: '600',
+  },
+  statusPending: {
+    color: '#F59E0B',
+    fontWeight: '600',
   },
   priceValue: {
     fontSize: 18,

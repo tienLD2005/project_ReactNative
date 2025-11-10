@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { BookingResponse, cancelBooking, getPastBookings, getUpcomingBookings } from '@/apis/bookingApi';
+import { BOOKING_COLORS } from '@/constants/booking';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
+import { Image as ExpoImage } from 'expo-image';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
   Alert,
-  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Image as ExpoImage } from 'expo-image';
-import { useQuery } from '@tanstack/react-query';
-import { BOOKING_COLORS } from '@/constants/booking';
-import { getUpcomingBookings, getPastBookings, cancelBooking, BookingResponse } from '@/apis/bookingApi';
-import { useRouter } from 'expo-router';
 
 type TabType = 'upcoming' | 'past';
 
@@ -84,24 +83,67 @@ export default function BookingsScreen(): React.JSX.Element {
     });
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+  const formatDate = (dateInput: string | number[] | null | undefined): string => {
+    if (!dateInput) {
+      return 'N/A';
+    }
+
+    try {
+      let date: Date;
+
+      // Handle array format [year, month, day] from backend
+      if (Array.isArray(dateInput)) {
+        const [year, month, day] = dateInput;
+        if (year && month !== undefined && day !== undefined) {
+          date = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+        } else {
+          console.error('Invalid date array:', dateInput);
+          return 'N/A';
+        }
+      } else {
+        // Handle string format
+        const dateString = String(dateInput);
+
+        if (dateString.includes('T')) {
+          // ISO format with time: "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ss.SSSZ"
+          date = new Date(dateString);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          // Format "YYYY-MM-DD" - parse manually to avoid timezone issues
+          const [year, month, day] = dateString.split('-').map(Number);
+          date = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+        } else {
+          // Try to parse as-is
+          date = new Date(dateString);
+        }
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateInput);
+        return 'N/A';
+      }
+
+      // Format date to readable string
+      return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, dateInput);
+      return 'N/A';
+    }
   };
 
   const renderBookingCard = (booking: BookingResponse) => {
     const isUpcoming = activeTab === 'upcoming';
-    
+
     return (
       <View key={booking.bookingId} style={styles.bookingCard}>
         <View style={styles.bookingHeader}>
           <Text style={styles.bookingId}>Booking ID: {booking.bookingId}</Text>
           <Text style={styles.bookingDate}>
-            {formatDate(booking.checkIn)} - {formatDate(booking.checkOut)}
+            {formatDate(booking.checkIn as string | number[])} - {formatDate(booking.checkOut as string | number[])}
           </Text>
         </View>
 
@@ -114,6 +156,7 @@ export default function BookingsScreen(): React.JSX.Element {
             contentFit="cover"
           />
           <View style={styles.bookingInfo}>
+            {/* Rating - hiển thị kể cả khi bằng 0 */}
             <View style={styles.ratingRow}>
               {[...Array(5)].map((_, i) => (
                 <Ionicons
@@ -124,14 +167,27 @@ export default function BookingsScreen(): React.JSX.Element {
                 />
               ))}
               <Text style={styles.ratingText}>
-                {booking.rating?.toFixed(1) || '0.0'} ({booking.reviewCount || 0} Reviews)
+                {(booking.rating || 0).toFixed(1)} ({(booking.reviewCount || 0)} {(booking.reviewCount || 0) === 1 ? 'Review' : 'Reviews'})
               </Text>
             </View>
-            <Text style={styles.hotelName}>{booking.hotelName}</Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={16} color={BOOKING_COLORS.TEXT_SECONDARY} />
-              <Text style={styles.location}>{booking.hotelLocation || booking.hotelCity}</Text>
-            </View>
+
+            {/* Room Type */}
+            {booking.roomType ? (
+              <Text style={styles.roomType}>{booking.roomType}</Text>
+            ) : null}
+
+            {/* Hotel Name */}
+            <Text style={styles.hotelName}>{booking.hotelName || 'Hotel'}</Text>
+
+            {/* Location */}
+            {(booking.hotelLocation || booking.hotelCity) && (
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={16} color={BOOKING_COLORS.TEXT_SECONDARY} />
+                <Text style={styles.location}>
+                  {booking.hotelLocation || booking.hotelCity || booking.hotelAddress || ''}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -325,6 +381,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: BOOKING_COLORS.TEXT_SECONDARY,
     marginLeft: 4,
+  },
+  roomType: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: BOOKING_COLORS.TEXT_PRIMARY,
+    marginBottom: 4,
   },
   hotelName: {
     fontSize: 18,

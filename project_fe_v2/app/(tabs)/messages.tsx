@@ -5,7 +5,7 @@ import { BOOKING_COLORS } from '@/constants/booking';
 export default function MessagesScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Messages Screen</Text>
+      <Text style={styles.text}>Notification when booking and canceling a room</Text>
     </View>
   );
 }

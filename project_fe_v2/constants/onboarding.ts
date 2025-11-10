@@ -17,21 +17,21 @@ export interface OnboardingData {
 export const ONBOARDING_DATA: OnboardingData[] = [
   {
     id: 1,
-    title: 'Cách dễ dàng đặt khách sạn với chúng tôi',
-    description: 'Khám phá hàng nghìn khách sạn tuyệt vời với giá cả hợp lý. Đặt phòng nhanh chóng và thuận tiện chỉ với vài thao tác đơn giản.',
-    imageUrl: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800',
+    title: 'Easy way to book hotels with us',
+    description: 'It is  a long established fact that a reader will be distracted by the readable content  when looking at its layout the point of using Lorem Ipsum is that it has a more-or-less normal.',
+    imageUrl: 'https://images.pexels.com/photos/24284828/pexels-photo-24284828/free-photo-of-thap-mekkah.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500?w=800',
   },
   {
     id: 2,
-    title: 'Khám phá và tìm địa điểm nghỉ dưỡng hoàn hảo',
-    description: 'Tìm kiếm khách sạn phù hợp với nhu cầu của bạn. Từ những khu nghỉ dưỡng sang trọng đến những khách sạn tiện nghi, tất cả đều có ở đây.',
-    imageUrl: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800',
+    title: 'Discover and find the perfect vacation spot',
+    description: 'It is  a long established fact that a reader will be distracted by the readable content  when looking at its layout the point of using Lorem Ipsum is that it has a more-or-less normal.',
+    imageUrl: 'https://images.pexels.com/photos/10885325/pexels-photo-10885325.jpeg?w=800',
   },
   {
     id: 3,
-    title: 'Ưu đãi tốt nhất dành riêng cho bạn',
-    description: 'Nhận những ưu đãi độc quyền và giá cả tốt nhất. Đặt phòng ngay để không bỏ lỡ cơ hội tiết kiệm.',
-    imageUrl: 'https://images.unsplash.com/photo-1559314809-2b3d0e48c3d7?w=800',
+    title: 'Giving the best deal just for you',
+    description: 'It is  a long established fact that a reader will be distracted by the readable content  when looking at its layout the point of using Lorem Ipsum is that it has a more-or-less normal.',
+    imageUrl: 'https://images.pexels.com/photos/3510073/pexels-photo-3510073.jpeg?w=800',
   },
 ] as const;
 

@@ -11,7 +11,10 @@ import com.tien.entity.Otp;
 import com.tien.entity.User;
 import com.tien.repository.OtpRepository;
 import com.tien.repository.UserRepository;
+import com.tien.service.EmailService;
 import com.tien.service.OtpService;
+
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,11 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class OtpServiceImpl implements OtpService {
-    
-    private final OtpRepository otpRepository;
-    private final UserRepository userRepository;
+
     private static final int OTP_EXPIRY_MINUTES = 5;
     private static final int OTP_LENGTH = 4; // Tạo 4 chữ số OTP
+    private final OtpRepository otpRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Override
     public String generateOtpCode() {
@@ -54,11 +58,13 @@ public class OtpServiceImpl implements OtpService {
                 .build();
 
         Otp savedOtp = otpRepository.save(otp);
-        
-        // Gửi OTP qua SMS
-        sendOtpSms(user.getPhoneNumber(), otpCode);
-        
-        log.info("OTP created for user: {}, OTP: {}", user.getEmail(), otpCode);
+
+        // Gửi OTP qua email đến email của người dùng đăng ký
+        // Email nhận OTP là user.getEmail(), không phải email trong
+        // application.properties
+        sendOtpEmail(user.getEmail(), otpCode);
+
+        log.info("OTP created and sent to user email: {}", user.getEmail());
         return savedOtp;
     }
 
@@ -73,14 +79,14 @@ public class OtpServiceImpl implements OtpService {
 
         User user = userOpt.get();
         Optional<Otp> otpOpt = otpRepository.findByOtpCodeAndUser(otpCode, user);
-        
+
         if (otpOpt.isEmpty()) {
             log.warn("Invalid OTP code: {} for user: {}", otpCode, phoneNumber);
             return false;
         }
 
         Otp otp = otpOpt.get();
-        
+
         // Kiểm tra OTP đã được verify chưa
         if (otp.isVerified()) {
             log.warn("OTP already verified for user: {}", phoneNumber);
@@ -97,30 +103,15 @@ public class OtpServiceImpl implements OtpService {
         // Đánh dấu OTP đã được verify
         otp.setVerified(true);
         otpRepository.save(otp);
-        
+
         log.info("OTP verified successfully for user: {}", phoneNumber);
         return true;
     }
 
     @Override
     public void sendOtpSms(String phoneNumber, String otpCode) {
-        try {
-            // Log OTP ra console để dễ dàng lấy mã nhập (dùng cho development)
-            System.out.println("\n");
-            System.out.println("========================================");
-            System.out.println("         MÃ OTP ĐĂNG KÝ");
-            System.out.println("========================================");
-            System.out.println("Số điện thoại: " + phoneNumber);
-            System.out.println("MÃ OTP: " + otpCode);
-            System.out.println("Thời gian hết hạn: " + OTP_EXPIRY_MINUTES + " phút");
-            System.out.println("========================================");
-            System.out.println("\n");
-            
-            log.info("OTP generated for phone: {}, OTP Code: {}", phoneNumber, otpCode);
-        } catch (Exception e) {
-            log.error("Error generating OTP for {}: {}", phoneNumber, e.getMessage());
-            throw new RuntimeException("Không thể tạo OTP", e);
-        }
+        // Method này giữ lại để tương thích với interface, nhưng không sử dụng
+        // OTP sẽ được gửi qua email thay vì SMS
     }
 
     @Override
@@ -133,12 +124,22 @@ public class OtpServiceImpl implements OtpService {
 
         User user = userOpt.get();
         createOtp(user);
-        log.info("OTP resent to phone: {}", phoneNumber);
+        log.info("OTP resent to email: {}", user.getEmail());
     }
 
     @Override
     @Transactional
     public void deleteOtp(User user) {
         otpRepository.deleteByUser(user);
+    }
+
+    private void sendOtpEmail(String email, String otpCode) {
+        try {
+            emailService.sendOtpEmail(email, otpCode);
+            log.info("OTP email sent successfully to: {}", email);
+        } catch (MessagingException e) {
+            log.error("Error sending OTP email to {}: {}", email, e.getMessage());
+            throw new RuntimeException("Không thể gửi email OTP", e);
+        }
     }
 }

@@ -1,8 +1,10 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,7 +23,7 @@ export default function RegisterScreen() {
     fullName: "",
     email: "",
     phoneNumber: "",
-    dateOfBirth: new Date(),
+    dateOfBirth: new Date(2000, 0, 1), // Khởi tạo với ngày hợp lý
     gender: "Male" as "Male" | "Female",
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -131,13 +133,16 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Logo */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>LG</Text>
-          </View>
-          <Text style={styles.logoTitle}>live Green</Text>
+          <Image
+            source={require('@/assets/images/logo.png')}
+            style={styles.logo}
+            contentFit="contain"
+          />
         </View>
 
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Register Now!</Text>
           <Text style={styles.subtitle}>Enter your information below</Text>
@@ -149,8 +154,8 @@ export default function RegisterScreen() {
             placeholder="Enter Full Name"
             value={form.fullName}
             onChangeText={(text: any) => handleChange("fullName", text)}
+            error={errors.fullName}
           />
-          {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
 
           <Input
             label="Email Address"
@@ -159,8 +164,8 @@ export default function RegisterScreen() {
             onChangeText={(text: any) => handleChange("email", text)}
             keyboardType="email-address"
             autoCapitalize="none"
+            error={errors.email}
           />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
           <Input
             label="Mobile Number"
@@ -168,8 +173,8 @@ export default function RegisterScreen() {
             value={form.phoneNumber}
             onChangeText={handlePhoneChange}
             keyboardType="phone-pad"
+            error={errors.phoneNumber}
           />
-          {errors.phoneNumber && <Text style={styles.errorText}>{errors.phoneNumber}</Text>}
 
           <Input
             label="Date of Birth"
@@ -181,16 +186,66 @@ export default function RegisterScreen() {
             rightIcon="calendar-outline"
             onRightIconPress={() => setShowDatePicker(true)}
           />
-          {showDatePicker && (
+          {Platform.OS === "ios" && (
+            <Modal
+              visible={showDatePicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.datePickerContainer}>
+                  <View style={styles.datePickerHeader}>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      style={styles.datePickerButton}
+                    >
+                      <Text style={styles.datePickerButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      style={styles.datePickerButton}
+                    >
+                      <Text style={[styles.datePickerButtonText, styles.datePickerButtonTextPrimary]}>
+                        Done
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.datePickerWrapper}>
+                    <DateTimePicker
+                      value={form.dateOfBirth}
+                      mode="date"
+                      display="inline"
+                      onChange={(event: any, selectedDate?: Date) => {
+                        if (selectedDate) {
+                          handleChange("dateOfBirth", selectedDate);
+                        }
+                      }}
+                      maximumDate={new Date()}
+                      minimumDate={new Date(1900, 0, 1)}
+                      textColor="#000000"
+                      accentColor="#3182CE"
+                      themeVariant="light"
+                      locale="en_US"
+                    />
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          )}
+          {Platform.OS === "android" && showDatePicker && (
             <DateTimePicker
               value={form.dateOfBirth}
               mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
+              display="default"
               onChange={(event: any, selectedDate?: Date) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (selectedDate) handleChange("dateOfBirth", selectedDate);
+                setShowDatePicker(false);
+                if (event.type === "set" && selectedDate) {
+                  handleChange("dateOfBirth", selectedDate);
+                }
               }}
               maximumDate={new Date()}
+              minimumDate={new Date(1900, 0, 1)}
             />
           )}
 
@@ -248,24 +303,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
   logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 40,
+    justifyContent: "flex-start",
+    marginBottom: 20,
+    marginLeft: -35,
   },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#3182CE",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
+  logo: {
+    width: 250,
+    height: 120,
   },
-  logoText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
-  logoTitle: { fontSize: 20, fontWeight: "600", color: "#3182CE" },
   header: { marginBottom: 32 },
-  title: { fontSize: 28, fontWeight: "bold", color: "#3182CE", marginBottom: 8 },
+  title: { fontSize: 28, fontWeight: "bold", marginBottom: 8 },
   subtitle: { fontSize: 14, color: "#718096" },
   form: { marginBottom: 24 },
   genderContainer: { marginBottom: 24 },
@@ -286,7 +333,6 @@ const styles = StyleSheet.create({
   radioButtonInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#3182CE" },
   genderText: { fontSize: 16, color: "#4A5568" },
   genderTextSelected: { color: "#3182CE", fontWeight: "500" },
-  errorText: { color: "#E53E3E", fontSize: 13, marginTop: -8, marginBottom: 10 },
   loginContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -297,4 +343,46 @@ const styles = StyleSheet.create({
 
   loginText: { fontSize: 14, color: "#718096" },
   loginLink: { fontSize: 14, color: "#3182CE", fontWeight: "600" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  datePickerContainer: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
+    maxHeight: 500,
+    overflow: "hidden",
+    width: "100%",
+  },
+  datePickerWrapper: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  datePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  datePickerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: "#718096",
+  },
+  datePickerButtonTextPrimary: {
+    color: "#3182CE",
+    fontWeight: "600",
+  },
 });

@@ -1,13 +1,11 @@
 package com.tien.dto.response;
 
 import com.tien.entity.User;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
-
-import java.util.Collection;
 
 @Data
 @AllArgsConstructor
@@ -20,7 +18,6 @@ public class JWTResponse {
     private String authorities;
     private String token;
     private String refreshToken;
-
 
     public JWTResponse(User user, String accessToken, String refreshToken, String authorities) {
         this.fullName = user.getFullName();

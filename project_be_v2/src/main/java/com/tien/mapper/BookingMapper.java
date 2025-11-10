@@ -20,12 +20,8 @@ public class BookingMapper {
             roomImageUrl = room.getImages().get(0).getImageUrl();
         }
         
-        // Calculate average rating and review count for hotel
-        // Note: Rating and review count should be fetched from database if needed
-        // For now, we'll use default values
-        Double rating = 4.0; // Default rating
-        Integer reviewCount = 115; // Default review count
-        
+        // Rating and review count will be calculated in service layer
+        // Set default values here, will be overridden by service
         return BookingResponseDTO.builder()
             .bookingId(booking.getBookingId())
             .roomId(room != null ? room.getRoomId() : null)
@@ -46,8 +42,8 @@ public class BookingMapper {
             .childrenCount(booking.getChildrenCount())
             .infantsCount(booking.getInfantsCount())
             .createdAt(booking.getCreatedAt())
-            .rating(rating)
-            .reviewCount(reviewCount)
+            .rating(0.0) // Will be calculated in service layer
+            .reviewCount(0) // Will be calculated in service layer
             .build();
     }
     

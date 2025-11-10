@@ -67,6 +67,3 @@ export const completeRegistration = async (phoneNumber: string, password: string
     }
 };
 
-// Note: Legacy functions below may not match current API structure
-// sendRequestCode and verifyCode use email, but current API uses phoneNumber for OTP
-// If these are needed for forgot password flow, they should be updated separately

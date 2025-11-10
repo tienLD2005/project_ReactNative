@@ -1,26 +1,25 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Modal,
-  Platform,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { HotelCard } from "@/components/booking/hotel-card"; // có thể đổi thành RoomCard nếu bạn có component riêng
-import { BOOKING_COLORS, Hotel } from "@/constants/booking";
 import {
   getAllRooms,
-  searchRooms,
-  getRoomsByHotelId,
-  RoomResponse,
+  RoomResponse
 } from "@/apis/roomApi";
+import { HotelCard } from "@/components/booking/hotel-card"; // có thể đổi thành RoomCard nếu bạn có component riêng
+import { BOOKING_COLORS, Hotel } from "@/constants/booking";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Modal,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface FilterModalProps {
   visible: boolean;
@@ -84,23 +83,6 @@ export default function FilterRoomScreen(): React.JSX.Element {
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState("");
 
-  // --- Load toàn bộ phòng ---
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        setLoading(true);
-        const data = await getAllRooms();
-        setAllRooms(data);
-        setRooms(mapRoomResponseToRoom(data));
-      } catch (err) {
-        console.error("Load rooms error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRooms();
-  }, []);
-
   // --- Map dữ liệu RoomResponse -> Card model ---
   const mapRoomResponseToRoom = useCallback((data: RoomResponse[]): Hotel[] => {
     return data.map((item) => ({
@@ -108,14 +90,37 @@ export default function FilterRoomScreen(): React.JSX.Element {
       name: item.roomType,
       location: item.hotelName || "",
       price: item.price || 0,
-      rating: 0,
-      reviewCount: 0,
+      // Lấy rating và reviewCount từ data thực tế, xử lý null/undefined
+      rating: item.rating !== null && item.rating !== undefined ? item.rating : 0,
+      reviewCount: item.reviewCount !== null && item.reviewCount !== undefined ? item.reviewCount : 0,
       imageUrl:
         (item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : "") ||
         "",
       isFavorite: false,
     }));
   }, []);
+
+  // --- Load toàn bộ phòng ---
+  const fetchRooms = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllRooms();
+      setAllRooms(data);
+      setRooms(mapRoomResponseToRoom(data));
+    } catch (err) {
+      console.error("Load rooms error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [mapRoomResponseToRoom]);
+
+  // Reload data mỗi khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchRooms();
+    }, [fetchRooms])
+  );
+
 
   // --- Lấy danh sách khách sạn (để lọc theo hotel) ---
   const getHotelOptions = useCallback((): string[] => {
@@ -166,9 +171,9 @@ export default function FilterRoomScreen(): React.JSX.Element {
   };
 
   const sortOptions = [
-    { id: "popularity", label: "Phổ biến", icon: "grid-outline" },
-    { id: "price-low", label: "Giá: thấp đến cao", icon: "arrow-up-outline" },
-    { id: "price-high", label: "Giá: cao đến thấp", icon: "arrow-down-outline" },
+    { id: "popularity", label: "Popular", icon: "grid-outline" },
+    { id: "price-low", label: "Price: low to high", icon: "arrow-up-outline" },
+    { id: "price-high", label: "Price: high to low", icon: "arrow-down-outline" },
   ];
 
   const hotelOptions = getHotelOptions();
@@ -183,7 +188,7 @@ export default function FilterRoomScreen(): React.JSX.Element {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color={BOOKING_COLORS.TEXT_PRIMARY} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tìm kiếm phòng</Text>
+        <Text style={styles.headerTitle}>Search for a room</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
           <Ionicons name="close" size={24} color={BOOKING_COLORS.TEXT_PRIMARY} />
         </TouchableOpacity>
@@ -193,16 +198,16 @@ export default function FilterRoomScreen(): React.JSX.Element {
       <View style={styles.filterBar}>
         <TouchableOpacity style={styles.filterButton} onPress={() => setSortModalVisible(true)}>
           <Ionicons name="swap-vertical-outline" size={16} color={BOOKING_COLORS.PRIMARY} />
-          <Text style={styles.filterButtonText}>Sắp xếp</Text>
+          <Text style={styles.filterButtonText}>Sort by</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.filterButton} onPress={() => setHotelModalVisible(true)}>
-          <Text style={styles.filterButtonText}>Khách sạn</Text>
+          <Text style={styles.filterButtonText}>Locality</Text>
           <Ionicons name="chevron-down-outline" size={16} color={BOOKING_COLORS.PRIMARY} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.filterButton} onPress={() => setPriceModalVisible(true)}>
-          <Text style={styles.filterButtonText}>Giá</Text>
+          <Text style={styles.filterButtonText}>Price</Text>
           <Ionicons name="chevron-down-outline" size={16} color={BOOKING_COLORS.PRIMARY} />
         </TouchableOpacity>
       </View>
@@ -212,11 +217,11 @@ export default function FilterRoomScreen(): React.JSX.Element {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={BOOKING_COLORS.PRIMARY} />
-            <Text style={styles.loadingText}>Đang tải...</Text>
+            <Text style={styles.loadingText}>Loading...</Text>
           </View>
         ) : rooms.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Không tìm thấy phòng</Text>
+            <Text style={styles.emptyText}>No room found</Text>
           </View>
         ) : (
           <View style={styles.hotelsList}>

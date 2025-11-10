@@ -47,7 +47,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
         </TouchableOpacity>
         <View style={styles.ratingBadge}>
           <Ionicons name="star" size={12} color={BOOKING_COLORS.RATING} />
-          <Text style={styles.ratingText}>{hotel.rating}</Text>
+          <Text style={styles.ratingText}>{(hotel.rating || 0).toFixed(1)}</Text>
         </View>
       </View>
 
@@ -62,12 +62,12 @@ export const HotelCard: React.FC<HotelCardProps> = ({
           </Text>
         </View>
         <View style={styles.footer}>
-          {hotel.reviewCount > 0 && (
-            <Text style={styles.reviews}>({hotel.reviewCount} Đánh giá)</Text>
-          )}
+          <Text style={styles.reviews}>
+            ({(hotel.reviewCount || 0)} {hotel.reviewCount === 1 ? 'Review' : 'Reviews'})
+          </Text>
           {hotel.price > 0 ? (
             <Text style={styles.price}>
-              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(hotel.price)}/đêm
+              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(hotel.price)}/night
             </Text>
           ) : (
             <Text style={styles.pricePlaceholder}>Liên hệ</Text>

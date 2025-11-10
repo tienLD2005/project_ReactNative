@@ -61,20 +61,44 @@ export default function AccountScreen() {
 
       <View style={styles.menu}>
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="person-circle-outline" size={24} color="#4A5568" />
-          <Text style={styles.menuText}>Chỉnh sửa hồ sơ</Text>
+          <Ionicons name="create-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>Edit Profile</Text>
           <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="settings-outline" size={24} color="#4A5568" />
-          <Text style={styles.menuText}>Cài đặt</Text>
+          <Ionicons name="lock-closed-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>Change Password</Text>
           <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="notifications-outline" size={24} color="#4A5568" />
-          <Text style={styles.menuText}>Thông báo</Text>
+          <Ionicons name="card-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>Payment Method</Text>
+          <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Ionicons name="calendar-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>My Bookings</Text>
+          <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Ionicons name="eye-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>Dark Mode</Text>
+          <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Ionicons name="shield-checkmark-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>Privacy Policy</Text>
+          <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Ionicons name="document-text-outline" size={24} color="#4A5568" />
+          <Text style={styles.menuText}>Term & Conditions</Text>
           <FontAwesome5 name="chevron-right" size={16} color="#A0AEC0" />
         </TouchableOpacity>
       </View>

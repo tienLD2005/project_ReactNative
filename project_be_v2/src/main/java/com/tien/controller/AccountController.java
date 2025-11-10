@@ -28,6 +28,7 @@ import com.tien.repository.UserRepository;
 import com.tien.security.jwt.JWTProvider;
 import com.tien.service.OtpService;
 import com.tien.service.UserService;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,8 @@ public class AccountController {
         try {
             User user = userService.registerUser(userRegister);
             UserResponseDTO dto = UserMapper.toDTO(user);
-            return ResponseEntity.ok(APIResponse.success(dto, "Đăng ký thành công. Vui lòng kiểm tra console/log để nhận mã OTP."));
+            return ResponseEntity
+                    .ok(APIResponse.success(dto, "Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP."));
         } catch (RuntimeException e) {
             log.error("Registration error: {}", e.getMessage());
             return ResponseEntity.status(400)
@@ -74,7 +76,8 @@ public class AccountController {
     }
 
     @PostMapping("/complete-registration")
-    public ResponseEntity<APIResponse<Map<String, String>>> completeRegistration(@Valid @RequestBody SetPasswordRequest request) {
+    public ResponseEntity<APIResponse<Map<String, String>>> completeRegistration(
+            @Valid @RequestBody SetPasswordRequest request) {
         try {
             userService.setPassword(request.getPhoneNumber(), request.getPassword());
             return ResponseEntity.ok(APIResponse.success(
@@ -91,7 +94,7 @@ public class AccountController {
         try {
             otpService.resendOtp(request.getPhoneNumber());
             return ResponseEntity.ok(APIResponse.success(
-                    Map.of("message", "Mã OTP mới đã được gửi đến số điện thoại của bạn."),
+                    Map.of("message", "Mã OTP mới đã được gửi đến email của bạn."),
                     "Gửi lại OTP thành công"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(400)
@@ -103,8 +106,7 @@ public class AccountController {
     public ResponseEntity<?> login(@Valid @RequestBody UserLogin userLogin, HttpServletRequest request) {
         log.info("Login request: email={}, password={}", userLogin.getEmail(), userLogin.getPassword());
         Authentication auth = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(userLogin.getEmail(), userLogin.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(userLogin.getEmail(), userLogin.getPassword()));
 
         User user = userRepository.findByEmail(userLogin.getEmail())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản"));
@@ -114,10 +116,10 @@ public class AccountController {
                     .body(Map.of("message", "Tài khoản chưa được kích hoạt. Vui lòng hoàn tất đăng ký."));
         }
 
-        String authorities = auth.getAuthorities() == null ? "" : String.join(
-                ",",
-                auth.getAuthorities().stream().map(a -> a.getAuthority()).toList()
-        );
+        String authorities = auth.getAuthorities() == null ? ""
+                : String.join(
+                        ",",
+                        auth.getAuthorities().stream().map(a -> a.getAuthority()).toList());
 
         String accessToken = jwtProvider.generateToken(user.getEmail(), authorities);
         String refreshToken = jwtProvider.generateRefreshToken(user.getEmail(), authorities);
@@ -126,8 +128,7 @@ public class AccountController {
                 user,
                 accessToken,
                 refreshToken,
-                authorities
-        );
+                authorities);
 
         return ResponseEntity.ok(response);
 

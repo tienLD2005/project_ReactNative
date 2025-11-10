@@ -1,11 +1,14 @@
+import { getAllRooms, RoomResponse } from '@/apis/roomApi';
 import { CityButton } from '@/components/booking/city-button';
 import { HotelCard } from '@/components/booking/hotel-card'; // Có thể đổi tên sang RoomCard sau
 import { SearchBar } from '@/components/booking/search-bar';
-import { BOOKING_COLORS, Hotel as Room, City } from '@/constants/booking';
+import { BOOKING_COLORS, City, Hotel as Room } from '@/constants/booking';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   ScrollView,
   StatusBar,
@@ -13,10 +16,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getAllRooms, RoomResponse } from '@/apis/roomApi'; 
 
 export default function HomeScreen(): React.JSX.Element {
   const router = useRouter();
@@ -26,11 +27,7 @@ export default function HomeScreen(): React.JSX.Element {
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    loadRooms();
-  }, []);
-
-  const loadRooms = async () => {
+  const loadRooms = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAllRooms();
@@ -57,14 +54,21 @@ export default function HomeScreen(): React.JSX.Element {
         }));
       setCities(citiesList);
     } catch (error) {
-      console.error('Load rooms error:', error);
+      // console.error('Load rooms error:', error);
       setBestRooms([]);
       setNearbyRooms([]);
       setCities([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Reload data mỗi khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      loadRooms();
+    }, [loadRooms])
+  );
 
   const mapRoomResponseToRoom = (data: RoomResponse[]): Room[] => {
     return data.map((item) => ({
@@ -96,7 +100,7 @@ export default function HomeScreen(): React.JSX.Element {
         <Text style={styles.sectionTitle}>{title}</Text>
         {onSeeAll && (
           <TouchableOpacity onPress={onSeeAll}>
-            <Text style={styles.seeAllText}>Xem tất cả</Text>
+            <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -146,7 +150,7 @@ export default function HomeScreen(): React.JSX.Element {
         )}
 
         {/* Featured Rooms */}
-        {renderSectionHeader('Phòng nổi bật', () => router.push('/filter'))}
+        {renderSectionHeader('Best Rooms', () => router.push('/filter'))}
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={BOOKING_COLORS.PRIMARY} />
@@ -155,7 +159,7 @@ export default function HomeScreen(): React.JSX.Element {
           <FlatList
             data={bestRooms}
             renderItem={({ item }) => (
-              <HotelCard // Có thể rename sang RoomCard nếu bạn muốn
+              <HotelCard 
                 hotel={item}
                 variant="horizontal"
                 onPress={() => router.push(`/room-detail/${item.id}`)}
@@ -175,7 +179,7 @@ export default function HomeScreen(): React.JSX.Element {
         )}
 
         {/* Nearby Rooms */}
-        {renderSectionHeader('Phòng gần vị trí của bạn', () => router.push('/filter'))}
+        {renderSectionHeader('Nearby your location', () => router.push('/filter'))}
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={BOOKING_COLORS.PRIMARY} />

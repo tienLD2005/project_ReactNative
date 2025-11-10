@@ -11,10 +11,12 @@ import com.tien.dto.response.BookingResponseDTO;
 import com.tien.entity.Bookings;
 import com.tien.entity.Room;
 import com.tien.entity.User;
+import com.tien.entity.Review;
 import com.tien.exception.NotFoundException;
 import com.tien.mapper.BookingMapper;
 import com.tien.repository.BookingRepository;
 import com.tien.repository.RoomRepository;
+import com.tien.repository.ReviewRepository;
 import com.tien.service.BookingService;
 import com.tien.service.UserService;
 import com.tien.utils.BookingStatus;
@@ -26,6 +28,7 @@ public class BookingServiceImpl implements BookingService {
     
     private final BookingRepository bookingRepository;
     private final RoomRepository roomRepository;
+    private final ReviewRepository reviewRepository;
     private final UserService userService;
     
     @Override
@@ -59,7 +62,41 @@ public class BookingServiceImpl implements BookingService {
             .build();
         
         booking = bookingRepository.save(booking);
-        return BookingMapper.toDTO(booking);
+        return toDTOWithRating(booking);
+    }
+    
+    // Helper method to calculate rating and review count for a room
+    private void calculateRoomRating(Integer roomId, BookingResponseDTO dto) {
+        if (roomId == null) {
+            dto.setRating(0.0);
+            dto.setReviewCount(0);
+            return;
+        }
+        
+        List<Review> reviews = reviewRepository.findByRoom_RoomId(roomId);
+        if (reviews == null || reviews.isEmpty()) {
+            dto.setRating(0.0);
+            dto.setReviewCount(0);
+            return;
+        }
+        
+        int reviewCount = reviews.size();
+        double rating = reviews.stream()
+            .mapToInt(Review::getRating)
+            .average()
+            .orElse(0.0);
+        
+        dto.setRating(rating);
+        dto.setReviewCount(reviewCount);
+    }
+    
+    // Convert booking to DTO with rating calculation
+    private BookingResponseDTO toDTOWithRating(Bookings booking) {
+        BookingResponseDTO dto = BookingMapper.toDTO(booking);
+        if (dto != null && dto.getRoomId() != null) {
+            calculateRoomRating(dto.getRoomId(), dto);
+        }
+        return dto;
     }
     
     @Override
@@ -67,7 +104,14 @@ public class BookingServiceImpl implements BookingService {
     public List<BookingResponseDTO> getUpcomingBookings(Integer userId) {
         LocalDate today = LocalDate.now();
         List<Bookings> bookings = bookingRepository.findUpcomingBookings(userId, today);
-        return BookingMapper.toDTOList(bookings);
+        List<BookingResponseDTO> dtos = BookingMapper.toDTOList(bookings);
+        // Calculate ratings for all bookings
+        dtos.forEach(dto -> {
+            if (dto != null && dto.getRoomId() != null) {
+                calculateRoomRating(dto.getRoomId(), dto);
+            }
+        });
+        return dtos;
     }
     
     @Override
@@ -75,7 +119,14 @@ public class BookingServiceImpl implements BookingService {
     public List<BookingResponseDTO> getPastBookings(Integer userId) {
         LocalDate today = LocalDate.now();
         List<Bookings> bookings = bookingRepository.findPastBookings(userId, today);
-        return BookingMapper.toDTOList(bookings);
+        List<BookingResponseDTO> dtos = BookingMapper.toDTOList(bookings);
+        // Calculate ratings for all bookings
+        dtos.forEach(dto -> {
+            if (dto != null && dto.getRoomId() != null) {
+                calculateRoomRating(dto.getRoomId(), dto);
+            }
+        });
+        return dtos;
     }
     
     @Override
@@ -83,7 +134,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO getBookingById(Integer bookingId) {
         Bookings booking = bookingRepository.findById(bookingId)
             .orElseThrow(() -> new NotFoundException("Không tìm thấy booking với ID: " + bookingId));
-        return BookingMapper.toDTO(booking);
+        return toDTOWithRating(booking);
     }
     
     @Override
@@ -99,14 +150,21 @@ public class BookingServiceImpl implements BookingService {
         
         booking.setStatus(BookingStatus.CANCELLED);
         booking = bookingRepository.save(booking);
-        return BookingMapper.toDTO(booking);
+        return toDTOWithRating(booking);
     }
     
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponseDTO> getUserBookings(Integer userId) {
         List<Bookings> bookings = bookingRepository.findByUser_UserId(userId);
-        return BookingMapper.toDTOList(bookings);
+        List<BookingResponseDTO> dtos = BookingMapper.toDTOList(bookings);
+        // Calculate ratings for all bookings
+        dtos.forEach(dto -> {
+            if (dto != null && dto.getRoomId() != null) {
+                calculateRoomRating(dto.getRoomId(), dto);
+            }
+        });
+        return dtos;
     }
 }
 

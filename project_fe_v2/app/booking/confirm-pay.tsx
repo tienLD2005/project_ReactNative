@@ -1,52 +1,133 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getRoomById, RoomResponse } from '@/apis/roomApi';
+import { BOOKING_COLORS } from '@/constants/booking';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
-import { BOOKING_COLORS } from '@/constants/booking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConfirmPayScreen(): React.JSX.Element {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  
+
   const [paymentType, setPaymentType] = useState<'full' | 'partial'>('full');
+  const [room, setRoom] = useState<RoomResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
   const adults = parseInt(params.adults as string) || 2;
   const children = parseInt(params.children as string) || 0;
   const infants = parseInt(params.infants as string) || 0;
-  
-  // Get room price from params
-  const roomPrice = parseFloat(params.roomPrice as string) || 0;
-  
+
+  // Get room price from params or room data
+  const roomPrice = room?.price || parseFloat(params.roomPrice as string) || 0;
+
+  // Fetch room data
+  useEffect(() => {
+    const loadRoomData = async () => {
+      try {
+        setLoading(true);
+        const roomId = parseInt(params.roomId as string);
+        if (roomId) {
+          const roomData = await getRoomById(roomId);
+          setRoom(roomData);
+        }
+      } catch (error) {
+        console.error('Error loading room data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRoomData();
+  }, [params.roomId]);
+
+  // Helper function to parse date from various formats
+  const parseDate = (dateInput: string | number[] | null | undefined): Date | null => {
+    if (!dateInput) return null;
+
+    try {
+      // Handle array format [year, month, day] from backend
+      if (Array.isArray(dateInput)) {
+        const [year, month, day] = dateInput;
+        if (year && month !== undefined && day !== undefined) {
+          return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+        }
+        return null;
+      }
+
+      // Handle string format
+      const dateString = String(dateInput);
+
+      if (dateString.includes('T')) {
+        // ISO format with time
+        return new Date(dateString);
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        // Format "YYYY-MM-DD" - parse manually to avoid timezone issues
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      } else {
+        // Try to parse as-is
+        return new Date(dateString);
+      }
+    } catch (error) {
+      console.error('Error parsing date:', error, dateInput);
+      return null;
+    }
+  };
+
   // Calculate number of nights from checkIn and checkOut
-  const checkIn = params.checkIn ? new Date(params.checkIn as string) : new Date();
-  const checkOut = params.checkOut ? new Date(params.checkOut as string) : new Date();
-  const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
-  
+  const checkIn = parseDate(params.checkIn as string | number[] | undefined);
+  const checkOut = parseDate(params.checkOut as string | number[] | undefined);
+  const nights = checkIn && checkOut
+    ? Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)))
+    : 1;
+
+  // Format dates for display
+  const formatDateDisplay = (date: Date | null): string => {
+    if (!date || isNaN(date.getTime())) return 'Not selected';
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const datesDisplay = checkIn && checkOut
+    ? `${formatDateDisplay(checkIn)} - ${formatDateDisplay(checkOut)}`
+    : 'Please select dates';
+
   // Calculate total price: room price * number of guests * number of nights
   const totalGuests = adults + children; // infants don't count
-  const subtotal = roomPrice * totalGuests * nights;
+  const subtotal = roomPrice * nights;
   const discount = 0; // No discount for now
   const taxes = Math.round(subtotal * 0.1); // 10% tax
   const total = subtotal - discount + taxes;
 
   const handlePayNow = () => {
+    // Validate dates are present
+    if (!checkIn || !checkOut) {
+      // Show error or navigate back to select dates
+      return;
+    }
+
     // Pass all booking params to add card screen
     router.push({
       pathname: '/booking/add-card',
       params: {
         ...params,
         roomId: params.roomId || '',
-        checkIn: params.checkIn || '2023-05-06',
-        checkOut: params.checkOut || '2023-05-08',
+        checkIn: params.checkIn as string,
+        checkOut: params.checkOut as string,
         totalPrice: total.toFixed(2),
       },
     });
@@ -78,7 +159,7 @@ export default function ConfirmPayScreen(): React.JSX.Element {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={BOOKING_COLORS.BACKGROUND} />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -92,39 +173,123 @@ export default function ConfirmPayScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}>
-        
+
         {/* Property Details Card */}
-        <View style={styles.propertyCard}>
-          <ExpoImage
-            source={{ uri: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=200' }}
-            style={styles.propertyImage}
-            contentFit="cover"
-          />
-          <View style={styles.propertyInfo}>
-            <View style={styles.ratingRow}>
-              {[...Array(5)].map((_, i) => (
-                <Ionicons key={i} name="star" size={14} color={BOOKING_COLORS.RATING} />
-              ))}
-              <Text style={styles.ratingText}>4.0 (115 Reviews)</Text>
-            </View>
-            <Text style={styles.propertyName}>Malon Greens</Text>
-            <Text style={styles.propertyLocation}>Mumbai, Maharashtra</Text>
-            <Text style={styles.propertySummary}>
-              {adults} adults | {children} children
-            </Text>
+        {loading ? (
+          <View style={styles.propertyCard}>
+            <ActivityIndicator size="small" color={BOOKING_COLORS.PRIMARY} />
+            <Text style={styles.loadingText}>Loading room details...</Text>
           </View>
-        </View>
+        ) : room ? (
+          <View style={styles.propertyCard}>
+            <ExpoImage
+              source={{
+                uri:
+                  room.imageUrls && room.imageUrls.length > 0
+                    ? room.imageUrls[0]
+                    : 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=200',
+              }}
+              style={styles.propertyImage}
+              contentFit="cover"
+            />
+            <View style={styles.propertyInfo}>
+              {room.rating && room.rating > 0 && (
+                <View style={styles.ratingRow}>
+                  {[...Array(5)].map((_, i) => (
+                    <Ionicons
+                      key={i}
+                      name={i < Math.floor(room.rating || 0) ? 'star' : 'star-outline'}
+                      size={14}
+                      color={BOOKING_COLORS.RATING}
+                    />
+                  ))}
+                  <Text style={styles.ratingText}>
+                    {room.rating.toFixed(1)} ({room.reviewCount || 0} Reviews)
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.propertyName}>{room.roomType}</Text>
+              <Text style={styles.propertyLocation}>{room.hotelName || 'Hotel'}</Text>
+              <Text style={styles.propertySummary}>
+                {adults} {adults === 1 ? 'adult' : 'adults'}
+                {children > 0 && ` | ${children} ${children === 1 ? 'child' : 'children'}`}
+                {infants > 0 && ` | ${infants} ${infants === 1 ? 'infant' : 'infants'}`}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.propertyCard}>
+            <ExpoImage
+              source={{
+                uri:
+                  (params.roomImage as string) ||
+                  'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=200',
+              }}
+              style={styles.propertyImage}
+              contentFit="cover"
+            />
+            <View style={styles.propertyInfo}>
+              {params.rating && parseFloat(params.rating as string) > 0 && (
+                <View style={styles.ratingRow}>
+                  {[...Array(5)].map((_, i) => (
+                    <Ionicons
+                      key={i}
+                      name={
+                        i < Math.floor(parseFloat(params.rating as string) || 0)
+                          ? 'star'
+                          : 'star-outline'
+                      }
+                      size={14}
+                      color={BOOKING_COLORS.RATING}
+                    />
+                  ))}
+                  <Text style={styles.ratingText}>
+                    {parseFloat(params.rating as string).toFixed(1)} (
+                    {params.reviewCount || 0} Reviews)
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.propertyName}>
+                {params.roomName || 'Room'}
+              </Text>
+              <Text style={styles.propertyLocation}>
+                {params.hotelName || 'Hotel'}
+              </Text>
+              <Text style={styles.propertySummary}>
+                {adults} {adults === 1 ? 'adult' : 'adults'}
+                {children > 0 && ` | ${children} ${children === 1 ? 'child' : 'children'}`}
+                {infants > 0 && ` | ${infants} ${infants === 1 ? 'infant' : 'infants'}`}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Booking Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Booking Details</Text>
-          
+
           <View style={styles.detailRow}>
             <View style={styles.detailInfo}>
               <Text style={styles.detailLabel}>Dates</Text>
-              <Text style={styles.detailValue}>May 06, 2023 - May 08, 2023</Text>
+              <Text style={styles.detailValue}>{datesDisplay}</Text>
             </View>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Navigate back to select-date to change dates
+                router.push({
+                  pathname: '/booking/select-date',
+                  params: {
+                    roomId: params.roomId,
+                    roomName: params.roomName,
+                    roomPrice: params.roomPrice,
+                    adults: params.adults,
+                    children: params.children,
+                    infants: params.infants,
+                    checkIn: params.checkIn,
+                    checkOut: params.checkOut,
+                  },
+                });
+              }}>
               <Ionicons name="pencil" size={20} color={BOOKING_COLORS.PRIMARY} />
             </TouchableOpacity>
           </View>
@@ -133,10 +298,28 @@ export default function ConfirmPayScreen(): React.JSX.Element {
             <View style={styles.detailInfo}>
               <Text style={styles.detailLabel}>Guests</Text>
               <Text style={styles.detailValue}>
-                {adults} adults | {children} {children === 1 ? 'child' : 'children'}
+                {adults} {adults === 1 ? 'adult' : 'adults'}
+                {children > 0 && ` | ${children} ${children === 1 ? 'child' : 'children'}`}
+                {infants > 0 && ` | ${infants} ${infants === 1 ? 'infant' : 'infants'}`}
               </Text>
             </View>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                // Navigate back to select-guest to change guests
+                router.push({
+                  pathname: '/booking/select-guest',
+                  params: {
+                    roomId: params.roomId,
+                    roomName: params.roomName,
+                    roomPrice: params.roomPrice,
+                    checkIn: params.checkIn,
+                    checkOut: params.checkOut,
+                    adults: params.adults,
+                    children: params.children,
+                    infants: params.infants,
+                  },
+                });
+              }}>
               <Ionicons name="pencil" size={20} color={BOOKING_COLORS.PRIMARY} />
             </TouchableOpacity>
           </View>
@@ -181,7 +364,7 @@ export default function ConfirmPayScreen(): React.JSX.Element {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Price Details</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>${roomPrice.toFixed(2)} x {totalGuests} guests x {nights} nights</Text>
+            <Text style={styles.priceLabel}>${roomPrice.toFixed(2)}  x {nights} nights</Text>
             <Text style={styles.priceValue}>${subtotal.toFixed(2)}</Text>
           </View>
           {discount > 0 && (
@@ -249,6 +432,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginBottom: 24,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: BOOKING_COLORS.TEXT_SECONDARY,
   },
   propertyImage: {
     width: 80,
