@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: BOOKING_COLORS.PRIMARY,
+    color: '#000000',
   },
 });
 

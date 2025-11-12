@@ -73,10 +73,10 @@ export default function OnboardingScreen(): React.JSX.Element {
   const handleGetStarted = async (): Promise<void> => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
-      router.replace('/login');
+      router.replace('/auth/login');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
-      router.replace('/login');
+      router.replace('/auth/login');
     }
   };
 

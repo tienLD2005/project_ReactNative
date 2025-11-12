@@ -61,7 +61,15 @@ public class SpringSecurity {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/register", 
+                                        "/api/v1/auth/login", 
+                                        "/api/v1/auth/verify-otp",
+                                        "/api/v1/auth/complete-registration",
+                                        "/api/v1/auth/resend-otp",
+                                        "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/auth/profile",
+                                        "/api/v1/auth/upload-avatar",
+                                        "/api/v1/auth/upload-avatar-base64").authenticated()
                         .requestMatchers("/api/v1/hotels/**", "/api/v1/rooms/**", "/api/v1/reviews/**").permitAll()
                         .requestMatchers(SWAGGER_WHITELIST).permitAll() // ✅ Cho Swagger
                         .anyRequest().authenticated())

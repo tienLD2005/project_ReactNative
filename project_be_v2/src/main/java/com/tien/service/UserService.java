@@ -1,5 +1,6 @@
 package com.tien.service;
 
+import com.tien.dto.request.UpdateProfileRequest;
 import com.tien.dto.request.UserLogin;
 import com.tien.dto.request.UserRegister;
 import com.tien.dto.response.JWTResponse;
@@ -10,4 +11,5 @@ public interface UserService {
     void setPassword(String phoneNumber, String password);
     JWTResponse login(UserLogin userLogin);
     public User getCurrentUser();
+    User updateProfile(UpdateProfileRequest request);
 }

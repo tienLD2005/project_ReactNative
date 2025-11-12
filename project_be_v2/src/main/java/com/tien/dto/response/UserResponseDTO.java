@@ -16,4 +16,5 @@ public class UserResponseDTO {
     private String phoneNumber;
     private String dateOfBirth;
     private String gender;
+    private String avatar;
 }

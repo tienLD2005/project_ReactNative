@@ -47,7 +47,17 @@ public class JWTAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getServletPath();
-        return path.startsWith("/api/v1/auth/");
+        // Skip filter for public auth endpoints, but not for /profile and /upload-avatar
+        if (path.startsWith("/api/v1/auth/")) {
+            // These endpoints require authentication, so don't skip filter
+            if (path.equals("/api/v1/auth/profile") || 
+                path.equals("/api/v1/auth/upload-avatar") ||
+                path.equals("/api/v1/auth/upload-avatar-base64")) {
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 
 }

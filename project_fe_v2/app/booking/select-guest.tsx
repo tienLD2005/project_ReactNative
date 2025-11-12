@@ -1,16 +1,16 @@
+import { BOOKING_COLORS } from '@/constants/booking';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
   ImageBackground,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { BOOKING_COLORS } from '@/constants/booking';
 
 export default function SelectGuestScreen(): React.JSX.Element {
   const router = useRouter();
@@ -92,12 +92,19 @@ export default function SelectGuestScreen(): React.JSX.Element {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800' }}
         style={styles.backgroundImage}
         blurRadius={20}>
         <View style={styles.blurOverlay}>
+          {/* Header with back button */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={BOOKING_COLORS.BACKGROUND} />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.contentCard}>
             <Text style={styles.title}>Select Guest</Text>
 
@@ -130,6 +137,20 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  header: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(67, 63, 63, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   contentCard: {
     backgroundColor: BOOKING_COLORS.BACKGROUND,

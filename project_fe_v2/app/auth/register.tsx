@@ -13,9 +13,9 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import axiosInstance from "../utils/axiosInstance";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import axiosInstance from "../../utils/axiosInstance";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -105,7 +105,7 @@ export default function RegisterScreen() {
         if (res.data?.success || res.data?.data) {
           Alert.alert("Thành công", res.data?.message || "Đăng ký thành công. Vui lòng kiểm tra mã OTP.");
           router.push({
-            pathname: "/verify-otp",
+            pathname: "/auth/verify-otp",
             params: { phoneNumber: phoneNumberClean },
           });
         } else {
@@ -290,7 +290,7 @@ export default function RegisterScreen() {
 
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>Already a member? </Text>
-          <Text style={styles.loginLink} onPress={() => router.replace("/login")}>
+          <Text style={styles.loginLink} onPress={() => router.replace("/auth/login")}>
             Login
           </Text>
         </View>

@@ -1,17 +1,19 @@
+import { BOOKING_COLORS } from "@/constants/booking";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import Button from "../components/Button";
-import axiosInstance from "../utils/axiosInstance";
+import Button from "../../components/Button";
+import axiosInstance from "../../utils/axiosInstance";
 
 export default function VerifyOTPScreen() {
   const router = useRouter();
@@ -105,7 +107,7 @@ export default function VerifyOTPScreen() {
         if (res.data?.success || res.data?.data) {
           // Navigate to set password screen
           router.push({
-            pathname: "/set-password",
+            pathname: "/auth/set-password",
             params: {
               phoneNumber: phoneNumberClean,
             },
@@ -164,76 +166,83 @@ export default function VerifyOTPScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Back button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#3182CE" />
-        </TouchableOpacity>
-
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>LG</Text>
-          </View>
-          <Text style={styles.logoTitle}>live Green</Text>
-        </View>
-
-        {/* Header */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header with back button */}
         <View style={styles.header}>
-          <Text style={styles.title}>Enter OTP Code</Text>
-          <Text style={styles.subtitle}>
-            OTP code has been sent to {formatPhoneNumber(phoneNumber)}
-          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={BOOKING_COLORS.TEXT_PRIMARY} />
+          </TouchableOpacity>
         </View>
 
-        {/* OTP Input */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-                              ref={(ref) => {
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <View style={styles.iconWrapper}>
+              <Ionicons name="mail" size={32} color={BOOKING_COLORS.PRIMARY} />
+            </View>
+            <Text style={styles.title}>Verify OTP</Text>
+            <Text style={styles.subtitle}>
+              We've sent a verification code to{'\n'}
+              <Text style={styles.phoneNumber}>{formatPhoneNumber(phoneNumber)}</Text>
+            </Text>
+          </View>
+
+          {/* OTP Input */}
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
                   inputRefs.current[index] = ref;
                 }}
-              style={[
-                styles.otpInput,
-                digit && styles.otpInputFilled,
-              ]}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              selectTextOnFocus
-            />
-          ))}
-        </View>
+                style={[
+                  styles.otpInput,
+                  digit && styles.otpInputFilled,
+                ]}
+                value={digit}
+                onChangeText={(value) => handleOtpChange(value, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                selectTextOnFocus
+              />
+            ))}
+          </View>
 
-        {/* Resend Code */}
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>Didn't receive code? </Text>
-          {timer > 0 ? (
-            <Text style={styles.timerText}>Resend code {String(Math.floor(timer / 60)).padStart(2, "0")}:{String(timer % 60).padStart(2, "0")}s</Text>
-          ) : (
-            <TouchableOpacity onPress={onResend} disabled={resendLoading}>
-              <Text style={styles.resendLink}>
-                {resendLoading ? "Resending..." : "Resend"}
+          {/* Resend Code */}
+          <View style={styles.resendContainer}>
+            <Text style={styles.resendText}>Didn't receive code? </Text>
+            {timer > 0 ? (
+              <Text style={styles.timerText}>
+                Resend in {String(Math.floor(timer / 60)).padStart(2, "0")}:{String(timer % 60).padStart(2, "0")}
               </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            ) : (
+              <TouchableOpacity onPress={onResend} disabled={resendLoading}>
+                <Text style={styles.resendLink}>
+                  {resendLoading ? "Resending..." : "Resend"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {/* Verify Button */}
-        <Button
-          title="Verify"
-          onPress={onVerify}
-          variant="primary"
-          isLoading={loading}
-          disabled={otp.join("").length !== 4}
-        />
-      </View>
+          {/* Verify Button */}
+          <Button
+            title="Verify"
+            onPress={onVerify}
+            variant="primary"
+            isLoading={loading}
+            disabled={otp.join("").length !== 4}
+            fullWidth={true}
+          />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -241,75 +250,92 @@ export default function VerifyOTPScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: BOOKING_COLORS.BACKGROUND,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
-  backButton: {
-    marginBottom: 20,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-  },
-  logoContainer: {
-    flexDirection: "row",
+  titleContainer: {
+    marginBottom: 48,
     alignItems: "center",
-    marginBottom: 40,
   },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#3182CE",
-    alignItems: "center",
+  iconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: `${BOOKING_COLORS.PRIMARY}15`,
     justifyContent: "center",
-    marginRight: 10,
-  },
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  logoTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#3182CE",
-  },
-  header: {
-    marginBottom: 32,
+    alignItems: "center",
+    marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#3182CE",
-    marginBottom: 8,
+    fontSize: 32,
+    fontWeight: "700",
+    color: BOOKING_COLORS.TEXT_PRIMARY,
+    marginBottom: 12,
+    textAlign: "center",
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
-    color: "#718096",
+    fontSize: 16,
+    color: BOOKING_COLORS.TEXT_SECONDARY,
+    lineHeight: 24,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  phoneNumber: {
+    fontWeight: "600",
+    color: BOOKING_COLORS.TEXT_PRIMARY,
   },
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 32,
+    paddingHorizontal: 10,
   },
   otpInput: {
     width: 70,
     height: 70,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
+    borderColor: BOOKING_COLORS.BORDER,
+    borderRadius: 16,
     textAlign: "center",
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1A202C",
+    fontSize: 28,
+    fontWeight: "700",
+    color: BOOKING_COLORS.TEXT_PRIMARY,
+    backgroundColor: BOOKING_COLORS.CARD_BACKGROUND,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   otpInputFilled: {
-    borderColor: "#3182CE",
-    backgroundColor: "#EBF8FF",
+    borderColor: BOOKING_COLORS.PRIMARY,
+    backgroundColor: `${BOOKING_COLORS.PRIMARY}10`,
+    borderWidth: 3,
+    shadowColor: BOOKING_COLORS.PRIMARY,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   resendContainer: {
     flexDirection: "row",
@@ -319,16 +345,16 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: "#718096",
+    color: BOOKING_COLORS.TEXT_SECONDARY,
   },
   resendLink: {
     fontSize: 14,
-    color: "#3182CE",
+    color: BOOKING_COLORS.PRIMARY,
     fontWeight: "600",
   },
   timerText: {
     fontSize: 14,
-    color: "#718096",
+    color: BOOKING_COLORS.TEXT_SECONDARY,
   },
 });
 

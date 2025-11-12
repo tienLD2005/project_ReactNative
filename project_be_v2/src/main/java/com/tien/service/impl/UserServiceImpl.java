@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tien.dto.request.UpdateProfileRequest;
 import com.tien.dto.request.UserLogin;
 import com.tien.dto.request.UserRegister;
 import com.tien.dto.response.JWTResponse;
@@ -60,6 +61,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(userRegister.getPhoneNumber())
                 .dateOfBirth(userRegister.getDateOfBirth())
                 .gender(userRegister.getGender())
+                .avatar("https://aic.com.vn/wp-content/uploads/2024/10/avatar-fb-mac-dinh-1.jpg") // Avatar mặc định
                 .enabled(false) // Chưa được kích hoạt cho đến khi verify OTP và set password
                 .build();
         userRepository.save(user);
@@ -115,17 +117,61 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getCurrentUser() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || authentication.getPrincipal() == null) {
+            log.error("Authentication is null or principal is null");
+            throw new RuntimeException("Không có thông tin xác thực. Vui lòng đăng nhập lại.");
+        }
+        
+        Object principal = authentication.getPrincipal();
 
         String email;
         if (principal instanceof UserDetails) {
             email = ((UserDetails) principal).getUsername();
+            log.debug("Getting user by email from UserDetails: {}", email);
         } else {
             email = principal.toString();
+            log.debug("Getting user by email from principal string: {}", email);
         }
 
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
+                .orElseThrow(() -> {
+                    log.error("User not found with email: {}", email);
+                    return new RuntimeException("Không tìm thấy user với email: " + email);
+                });
 
+    }
+
+    @Override
+    @Transactional
+    public User updateProfile(UpdateProfileRequest request) {
+        User user = getCurrentUser();
+
+        // Chỉ cập nhật các trường được cung cấp (không null)
+        if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            // Kiểm tra số điện thoại đã tồn tại chưa (trừ chính user hiện tại)
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber()) 
+                    && !request.getPhoneNumber().equals(user.getPhoneNumber())) {
+                throw new RuntimeException("Số điện thoại đã được sử dụng");
+            }
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+        if (request.getDateOfBirth() != null) {
+            user.setDateOfBirth(request.getDateOfBirth());
+        }
+        if (request.getGender() != null && !request.getGender().trim().isEmpty()) {
+            user.setGender(request.getGender());
+        }
+        if (request.getAvatar() != null && !request.getAvatar().trim().isEmpty()) {
+            user.setAvatar(request.getAvatar());
+        }
+
+        userRepository.save(user);
+        log.info("Profile updated for user: {}", user.getEmail());
+        return user;
     }
 }

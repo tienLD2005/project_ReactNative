@@ -9,13 +9,17 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.tien.dto.request.RefreshTokenRequest;
 import com.tien.dto.request.ResendOtpRequest;
 import com.tien.dto.request.SetPasswordRequest;
+import com.tien.dto.request.UpdateProfileRequest;
 import com.tien.dto.request.UserLogin;
 import com.tien.dto.request.UserRegister;
 import com.tien.dto.request.VerifyOtpRequest;
@@ -26,6 +30,7 @@ import com.tien.entity.User;
 import com.tien.mapper.UserMapper;
 import com.tien.repository.UserRepository;
 import com.tien.security.jwt.JWTProvider;
+import com.tien.service.CloudinaryService;
 import com.tien.service.OtpService;
 import com.tien.service.UserService;
 
@@ -48,6 +53,7 @@ public class AccountController {
     private final JWTProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
     private final HttpServletRequest request;
+    private final CloudinaryService cloudinaryService;
 
     @PostMapping("/register")
     public ResponseEntity<APIResponse<UserResponseDTO>> registerUser(@Valid @RequestBody UserRegister userRegister) {
@@ -143,5 +149,59 @@ public class AccountController {
         String email = jwtProvider.getUsernameFromToken(refreshToken);
         String newAccessToken = jwtProvider.generateToken(email, "");
         return ResponseEntity.ok(Map.of("token", newAccessToken));
+    }
+
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<APIResponse<Map<String, String>>> uploadAvatar(
+            @RequestParam("image") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.status(400)
+                        .body(APIResponse.error("File không được để trống", null));
+            }
+
+            String imageUrl = cloudinaryService.uploadImage(file);
+            return ResponseEntity.ok(APIResponse.success(
+                    Map.of("imageUrl", imageUrl),
+                    "Upload ảnh thành công"));
+        } catch (RuntimeException e) {
+            log.error("Upload avatar error: {}", e.getMessage());
+            return ResponseEntity.status(400)
+                    .body(APIResponse.error(e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/upload-avatar-base64")
+    public ResponseEntity<APIResponse<Map<String, String>>> uploadAvatarBase64(
+            @RequestBody Map<String, String> request) {
+        try {
+            String base64Image = request.get("image");
+            if (base64Image == null || base64Image.isEmpty()) {
+                return ResponseEntity.status(400)
+                        .body(APIResponse.error("Base64 image không được để trống", null));
+            }
+
+            String imageUrl = cloudinaryService.uploadImageFromBase64(base64Image);
+            return ResponseEntity.ok(APIResponse.success(
+                    Map.of("imageUrl", imageUrl),
+                    "Upload ảnh thành công"));
+        } catch (RuntimeException e) {
+            log.error("Upload avatar base64 error: {}", e.getMessage());
+            return ResponseEntity.status(400)
+                    .body(APIResponse.error(e.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<APIResponse<UserResponseDTO>> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
+        try {
+            User user = userService.updateProfile(request);
+            UserResponseDTO dto = UserMapper.toDTO(user);
+            return ResponseEntity.ok(APIResponse.success(dto, "Cập nhật profile thành công"));
+        } catch (RuntimeException e) {
+            log.error("Update profile error: {}", e.getMessage());
+            return ResponseEntity.status(400)
+                    .body(APIResponse.error(e.getMessage(), null));
+        }
     }
 }

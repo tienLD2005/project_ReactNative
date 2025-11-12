@@ -351,7 +351,7 @@ export default function RoomDetailScreen(): React.JSX.Element {
           {room.price && room.price > 0 ? (
             <>
               <Text style={styles.priceLabel}>
-                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.price)}
+                ${Math.round(room.price)}
               </Text>
               <Text style={styles.priceSubLabel}>/night</Text>
             </>
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: BOOKING_COLORS.BORDER,
   },
   priceContainer: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  priceLabel: { fontSize: 20, fontWeight: '700', color: BOOKING_COLORS.PRICE },
+  priceLabel: { fontSize: 20, fontWeight: '700', color: '#000000' },
   priceSubLabel: { fontSize: 14, fontWeight: '500', color: BOOKING_COLORS.TEXT_SECONDARY },
   selectDateButton: { backgroundColor: BOOKING_COLORS.PRIMARY, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12 },
   selectDateText: { fontSize: 16, fontWeight: '600', color: BOOKING_COLORS.BACKGROUND },

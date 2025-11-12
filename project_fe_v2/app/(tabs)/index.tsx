@@ -4,11 +4,12 @@ import { HotelCard } from '@/components/booking/hotel-card'; // Có thể đổi
 import { SearchBar } from '@/components/booking/search-bar';
 import { BOOKING_COLORS, City, Hotel as Room } from '@/constants/booking';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, usePreventRemove } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   FlatList,
   ScrollView,
   StatusBar,
@@ -21,11 +22,32 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen(): React.JSX.Element {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [bestRooms, setBestRooms] = useState<Room[]>([]);
   const [nearbyRooms, setNearbyRooms] = useState<Room[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Prevent back navigation on home screen
+  usePreventRemove(true, () => {
+    // Prevent back navigation
+  });
+
+  // Disable gesture and handle Android back button
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false,
+    });
+
+    // Handle Android back button
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Prevent back navigation on home screen
+      return true;
+    });
+
+    return () => backHandler.remove();
+  }, [navigation]);
 
   const loadRooms = useCallback(async () => {
     try {
@@ -159,7 +181,7 @@ export default function HomeScreen(): React.JSX.Element {
           <FlatList
             data={bestRooms}
             renderItem={({ item }) => (
-              <HotelCard 
+              <HotelCard
                 hotel={item}
                 variant="horizontal"
                 onPress={() => router.push(`/room-detail/${item.id}`)}
@@ -195,7 +217,7 @@ export default function HomeScreen(): React.JSX.Element {
                 <HotelCard
                   key={room.id}
                   hotel={room}
-                  variant="vertical"
+                  variant="nearby"
                   onPress={() => router.push(`/room-detail/${room.id}`)}
                   onFavoritePress={() => toggleFavorite(room.id, nearbyRooms, setNearbyRooms)}
                 />
@@ -209,7 +231,7 @@ export default function HomeScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BOOKING_COLORS.BACKGROUND },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

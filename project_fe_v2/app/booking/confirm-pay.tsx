@@ -128,7 +128,7 @@ export default function ConfirmPayScreen(): React.JSX.Element {
         roomId: params.roomId || '',
         checkIn: params.checkIn as string,
         checkOut: params.checkOut as string,
-        totalPrice: total.toFixed(2),
+        totalPrice: Math.round(total).toString(),
       },
     });
   };
@@ -364,22 +364,22 @@ export default function ConfirmPayScreen(): React.JSX.Element {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Price Details</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>${roomPrice.toFixed(2)}  x {nights} nights</Text>
-            <Text style={styles.priceValue}>${subtotal.toFixed(2)}</Text>
+            <Text style={styles.priceLabel}>${Math.round(roomPrice)}  x {nights} nights</Text>
+            <Text style={styles.priceValue}>${Math.round(subtotal)}</Text>
           </View>
           {discount > 0 && (
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Discount</Text>
-              <Text style={[styles.priceValue, styles.discountValue]}>-${discount.toFixed(2)}</Text>
+              <Text style={[styles.priceValue, styles.discountValue]}>-${Math.round(discount)}</Text>
             </View>
           )}
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Occupancy taxes and fees</Text>
-            <Text style={styles.priceValue}>${taxes.toFixed(2)}</Text>
+            <Text style={styles.priceValue}>${Math.round(taxes)}</Text>
           </View>
           <View style={[styles.priceRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Grand Total</Text>
-            <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+            <Text style={styles.totalValue}>${Math.round(total)}</Text>
           </View>
         </View>
       </ScrollView>
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: BOOKING_COLORS.TEXT_PRIMARY,
+    color: '#000000',
   },
   discountValue: {
     color: '#10B981',
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: BOOKING_COLORS.PRIMARY,
+    color: '#000000',
   },
   bottomBar: {
     paddingHorizontal: 16,

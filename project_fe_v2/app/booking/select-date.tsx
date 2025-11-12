@@ -1,16 +1,16 @@
+import { BOOKING_COLORS } from '@/constants/booking';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
   ImageBackground,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { BOOKING_COLORS } from '@/constants/booking';
 
 interface DateSelection {
   checkIn: Date | null;
@@ -21,12 +21,12 @@ export default function SelectDateScreen(): React.JSX.Element {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  
+
   // Initialize current month from params if dates exist, otherwise use current date
   const initialCheckIn = params.checkIn ? new Date(params.checkIn as string) : null;
   const initialCheckOut = params.checkOut ? new Date(params.checkOut as string) : null;
   const initialMonth = initialCheckIn || new Date();
-  
+
   const [currentMonth, setCurrentMonth] = useState(initialMonth);
   const [selectedDates, setSelectedDates] = useState<DateSelection>({
     checkIn: initialCheckIn,
@@ -103,16 +103,16 @@ export default function SelectDateScreen(): React.JSX.Element {
   const handleDateSelect = (day: number) => {
     const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     selectedDate.setHours(0, 0, 0, 0); // Normalize to midnight
-    
+
     if (isPastDate(selectedDate)) return;
 
     // Normalize check-in date for comparison
     const checkInNormalized = selectedDates.checkIn
       ? new Date(
-          selectedDates.checkIn.getFullYear(),
-          selectedDates.checkIn.getMonth(),
-          selectedDates.checkIn.getDate()
-        )
+        selectedDates.checkIn.getFullYear(),
+        selectedDates.checkIn.getMonth(),
+        selectedDates.checkIn.getDate()
+      )
       : null;
     checkInNormalized?.setHours(0, 0, 0, 0);
 
@@ -224,12 +224,19 @@ export default function SelectDateScreen(): React.JSX.Element {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+
       <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800' }}
         style={styles.backgroundImage}
         blurRadius={20}>
         <View style={styles.blurOverlay}>
+          {/* Header with back button */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={BOOKING_COLORS.BACKGROUND} />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.contentCard}>
             <Text style={styles.title}>Select Date</Text>
 
@@ -321,6 +328,20 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  header: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(67, 63, 63, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   contentCard: {
     backgroundColor: BOOKING_COLORS.BACKGROUND,

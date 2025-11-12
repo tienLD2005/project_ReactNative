@@ -14,7 +14,7 @@ export default function SplashScreen(): React.JSX.Element {
     const navigateToOnboarding = (): void => {
       setTimeout(() => {
         if (!isMounted) return;
-        router.replace('/onboarding');
+        router.replace('/auth/onboarding');
       }, SPLASH_DURATION);
     };
 

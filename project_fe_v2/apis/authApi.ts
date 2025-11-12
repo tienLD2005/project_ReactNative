@@ -67,3 +67,58 @@ export const completeRegistration = async (phoneNumber: string, password: string
     }
 };
 
+// Upload avatar (multipart form data)
+export const uploadAvatar = async (imageUri: string): Promise<any> => {
+    try {
+        const formData = new FormData();
+        
+        // Get file name and type from URI
+        const filename = imageUri.split('/').pop() || 'avatar.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        
+        formData.append('image', {
+            uri: imageUri,
+            type: type,
+            name: filename,
+        } as any);
+
+        const response = await axiosInstance.post("auth/upload-avatar", formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error: any) {
+        throw error;
+    }
+};
+
+// Upload avatar from base64
+export const uploadAvatarBase64 = async (base64Image: string): Promise<any> => {
+    try {
+        const response = await axiosInstance.post("auth/upload-avatar-base64", {
+            image: base64Image,
+        });
+        return response.data;
+    } catch (error: any) {
+        throw error;
+    }
+};
+
+// Update profile
+export const updateProfile = async (data: {
+    fullName?: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    avatar?: string;
+}): Promise<any> => {
+    try {
+        const response = await axiosInstance.put("auth/profile", data);
+        return response.data;
+    } catch (error: any) {
+        throw error;
+    }
+};
+

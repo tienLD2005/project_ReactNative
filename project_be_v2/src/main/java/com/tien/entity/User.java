@@ -50,6 +50,9 @@ public class User {
     @Column(name = "gender")
     private String gender;
 
+    @Column(name = "avatar", length = 500)
+    private String avatar;
+
     @Column(name = "enabled", nullable = false)
     private boolean enabled = false;
 

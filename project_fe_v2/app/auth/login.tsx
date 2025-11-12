@@ -4,9 +4,9 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Button from "../components/Button";
-import Input from "../components/Input";
-import axiosInstance from "../utils/axiosInstance";
+import Button from "../../components/Button";
+import Input from "../../components/Input";
+import axiosInstance from "../../utils/axiosInstance";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -98,6 +98,7 @@ export default function LoginScreen() {
           fullName: data.fullName,
           email: data.email,
           phone: data.phone,
+          avatar: data.avatar,
         })
       );
 
@@ -207,7 +208,7 @@ export default function LoginScreen() {
           <Text style={styles.registerText}>Don't have an account? </Text>
           <Text
             style={styles.registerLink}
-            onPress={() => router.push("/register")}
+            onPress={() => router.push("/auth/register")}
           >
             Register Now
           </Text>

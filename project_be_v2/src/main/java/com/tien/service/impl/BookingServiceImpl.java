@@ -18,8 +18,10 @@ import com.tien.repository.BookingRepository;
 import com.tien.repository.RoomRepository;
 import com.tien.repository.ReviewRepository;
 import com.tien.service.BookingService;
+import com.tien.service.NotificationService;
 import com.tien.service.UserService;
 import com.tien.utils.BookingStatus;
+import com.tien.utils.NotificationType;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -30,6 +32,7 @@ public class BookingServiceImpl implements BookingService {
     private final RoomRepository roomRepository;
     private final ReviewRepository reviewRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
     
     @Override
     @Transactional
@@ -62,6 +65,22 @@ public class BookingServiceImpl implements BookingService {
             .build();
         
         booking = bookingRepository.save(booking);
+        
+        // Tạo thông báo khi booking thành công
+        String title = "Booking Confirmed! 🎉";
+        String message = String.format(
+            "Your booking has been confirmed successfully. Check-in: %s, Check-out: %s",
+            booking.getCheckIn(),
+            booking.getCheckOut()
+        );
+        notificationService.createNotification(
+            user,
+            NotificationType.BOOKING_SUCCESS,
+            booking,
+            title,
+            message
+        );
+        
         return toDTOWithRating(booking);
     }
     
@@ -150,6 +169,18 @@ public class BookingServiceImpl implements BookingService {
         
         booking.setStatus(BookingStatus.CANCELLED);
         booking = bookingRepository.save(booking);
+        
+        // Tạo thông báo khi hủy booking
+        String title = "Booking Cancelled";
+        String message = "Your booking has been cancelled. Refund will be processed according to the cancellation policy.";
+        notificationService.createNotification(
+            currentUser,
+            NotificationType.BOOKING_CANCELLED,
+            booking,
+            title,
+            message
+        );
+        
         return toDTOWithRating(booking);
     }
     
